@@ -8,6 +8,8 @@
  [SCBS Config Files Walkthrough](https://ucsf.box.com/s/s12iiy0qyndnn1ziuigcg28jxu4d26tl)
  
  [SCBS Application Walkthrough](https://ucsf.box.com/s/znbk3ffso08xxtpl2deuqd8f8tr3ty60)
+ 
+ [SCBS Montage/Switch Setup and Walkthrough](https://ucsf.box.com/s/sqcsxuaog4ngtrlhjjqqcuwfma6vasph)
 
 ### Introduction
 
@@ -332,7 +334,7 @@ Lastly, if you plan to use the Switch functionality, you will need to add the ma
 	"DateTimeLastSwitch": "10/2/2019 7:25:01 PM",
 	"WaitTimeInMinutes": 5,
 	"WaitTimeIsEnabled": true,
-	"CurrentIndex": 1,
+	"CurrentIndex": 0,
 	"ConfigNames": [
 		"config1",
 		"config2",
