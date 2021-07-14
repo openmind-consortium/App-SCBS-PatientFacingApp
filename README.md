@@ -76,9 +76,12 @@ The program gets its configurations from .json files.  In order to run the progr
 The first config file is the application config file.  It needs to be in the directory C:\\SCBS\\application_config.json. The format for this is:
 ```
 {
+{
 	"comment": "true if it is bilateral or false if it is unilateral. Switch is true if you want the switch tab functionality or false if you do not. Set align to true if you want the align button visible, you must have bilateral set true for this to work",
 	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
-	"Bilateral": true,
+	"TurnOnResearcherTools": true,
+	"RunLeadIntegrityTestOnStartup": false,
+	"Bilateral": false,
 	"Switch": true,
 	"Align": true,
 	"Montage": true,
@@ -188,7 +191,7 @@ The next config files are used for sensing.  You will need to put both of these 
 		"TimeDomain": true,
 		"FFT": false,
 		"Power": true,
-		"Accelerometry": false,
+		"Accelerometry": true,
 		"AdaptiveTherapy": true,
 		"AdaptiveState": true,
 		"EventMarker": true,
@@ -222,7 +225,7 @@ The next config files are used for sensing.  You will need to put both of these 
 				"TdEvokedResponseEnable": 0
 			},
 			{
-				"IsEnabled": true,
+				"IsEnabled": false,
 				"Hpf": 0.85,
 				"Lpf1": 450,
 				"Lpf2": 1700,
@@ -233,7 +236,7 @@ The next config files are used for sensing.  You will need to put both of these 
 				"TdEvokedResponseEnable": 0
 			},
 			{
-				"IsEnabled": true,
+				"IsEnabled": false,
 				"Hpf": 0.85,
 				"Lpf1": 450,
 				"Lpf2": 1700,
@@ -245,7 +248,7 @@ The next config files are used for sensing.  You will need to put both of these 
 			}
 		],
 		"FFT": {
-			"commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and time domain must be enabled for that channel, WeightMultiplies can be shift: 0-7",
+			"commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and time domain must be enabled for that channel, WeightMultiplies/BandFormation can be shift: 0-7",
 			"Channel": 0,
 			"FftSize": 256,
 			"FftInterval": 100,
@@ -416,7 +419,7 @@ If you plan to use the Switch functionality, you will need to add the master swi
 	]
 }
 ```
-For this example, you will need 2 adaptive config files in the same directory as the master config file named config1.json and config2.json.  The adaptive config files have the format:
+For this example, you will need 2 adaptive config files (since there is only a config1 and config2, but you can have as many different files as you'd like to add ie: config3, config4, etc) in the same directory as the master config file named config1.json and config2.json.  The adaptive config files have the format:
 
 ```
 {
