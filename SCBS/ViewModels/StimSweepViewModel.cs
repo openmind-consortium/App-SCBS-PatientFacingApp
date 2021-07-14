@@ -1,5 +1,7 @@
 ﻿using Caliburn.Micro;
+using Medtronic.NeuroStim.Olympus.Commands;
 using Medtronic.NeuroStim.Olympus.DataTypes.DeviceManagement;
+using Medtronic.NeuroStim.Olympus.DataTypes.PowerManagement;
 using Medtronic.NeuroStim.Olympus.DataTypes.Therapy;
 using Medtronic.SummitAPI.Classes;
 using SCBS.Models;
@@ -27,6 +29,7 @@ namespace SCBS.ViewModels
         private int _currentProgress = 0;
         private Visibility _progressVisibility = Visibility.Collapsed;
         private string _progressText = "";
+        private string _exitCancelButtonText = "Cancel";
         //Models
         private AppModel appModel = null;
         private StimSweepModel stimSweepModel = null;
@@ -43,8 +46,8 @@ namespace SCBS.ViewModels
         private string originalLeftGroup, originalRightGroup;
         private volatile int currentIndex = 0;
         private int totalRunsForTitration = 0;
-        private int totalTimeForEntireTitration = 0;
-        private int totalTimeLeftForEntireTitration = 0;
+        private uint totalTimeForEntireTitration = 0;
+        private uint totalTimeLeftForEntireTitration = 0;
         private int timeIndicatingWhenToWriteEvent = 0;
 
         /// <summary>
@@ -91,10 +94,10 @@ namespace SCBS.ViewModels
             try
             {
                 //Check to make sure lists in config file are same size. If not then they need to fix and try again.
-                if (stimSweepModel.LeftINSOrUnilateral.RateInHz.Count() != stimSweepModel.TimeToRunInSeconds.Count() ||
-                    stimSweepModel.LeftINSOrUnilateral.Program.Count() != stimSweepModel.TimeToRunInSeconds.Count() ||
-                    stimSweepModel.LeftINSOrUnilateral.AmpInmA.Count() != stimSweepModel.TimeToRunInSeconds.Count() ||
-                    stimSweepModel.LeftINSOrUnilateral.PulseWidthInMicroSeconds.Count() != stimSweepModel.TimeToRunInSeconds.Count())
+                if (stimSweepModel.LeftINSOrUnilateral.RateInHz.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count() ||
+                    stimSweepModel.LeftINSOrUnilateral.Program.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count() ||
+                    stimSweepModel.LeftINSOrUnilateral.AmpInmA.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count() ||
+                    stimSweepModel.LeftINSOrUnilateral.PulseWidthInMicroSeconds.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count())
                 {
                     Messages.Insert(0, DateTime.Now + ":: Stim Sweep Config arrays are not the same size.  Please fix array sizes in config file and try again.");
                     _log.Warn("Stim Sweep Config arrays are not the same size");
@@ -102,10 +105,10 @@ namespace SCBS.ViewModels
                 }
                 if (isBilateral)
                 {
-                    if (stimSweepModel.RightINS.RateInHz.Count() != stimSweepModel.TimeToRunInSeconds.Count() ||
-                    stimSweepModel.RightINS.Program.Count() != stimSweepModel.TimeToRunInSeconds.Count() ||
-                    stimSweepModel.RightINS.AmpInmA.Count() != stimSweepModel.TimeToRunInSeconds.Count() ||
-                    stimSweepModel.RightINS.PulseWidthInMicroSeconds.Count() != stimSweepModel.TimeToRunInSeconds.Count())
+                    if (stimSweepModel.RightINS.RateInHz.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count() ||
+                    stimSweepModel.RightINS.Program.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count() ||
+                    stimSweepModel.RightINS.AmpInmA.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count() ||
+                    stimSweepModel.RightINS.PulseWidthInMicroSeconds.Count() != stimSweepModel.TimeToRunInMilliSeconds.Count())
                     {
                         Messages.Insert(0, DateTime.Now + ":: Stim Sweep Config arrays are not the same size.  Please fix array sizes in config file and try again.");
                         _log.Warn("Stim Sweep Config arrays are not the same size");
@@ -129,6 +132,18 @@ namespace SCBS.ViewModels
         }
 
         #region UI bindings
+        /// <summary>
+        /// Text for the cancel/exit button.
+        /// </summary>
+        public string ExitCancelButtonText
+        {
+            get { return _exitCancelButtonText; }
+            set
+            {
+                _exitCancelButtonText = value;
+                NotifyOfPropertyChange(() => ExitCancelButtonText);
+            }
+        }
         /// <summary>
         /// Enables or disables Start Button
         /// </summary>
@@ -204,24 +219,24 @@ namespace SCBS.ViewModels
         /// Cancel button to exit out of window
         /// </summary>
         /// <returns>async task</returns>
-        public async Task CancelButtonClick()
+        public void CancelButtonClick()
         {
-            _log.Info("Cancel Button Clicked in Stim Sweep");
+            _log.Info("Exit Button Clicked in Stim Sweep");
             //Change groups to original groups
             if (!String.IsNullOrEmpty(originalLeftGroup))
             {
-                if (CheckGroupIsCorrectFormat(originalLeftGroup) && !await Task.Run(() => ChangeActiveGroup(theSummitLeft, ConvertStimModelGroupToAPIGroup(originalLeftGroup), leftSenseModel)))
+                if (CheckGroupIsCorrectFormat(originalLeftGroup) && !ChangeActiveGroup(theSummitLeft, ConvertStimModelGroupToAPIGroup(originalLeftGroup), leftSenseModel))
                 {
-                    MessageBox.Show("Could not change group for left INS to original group. Please exit program and switch back to original group with PTM.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Could not change group for left/Unilateral INS to original group. Please exit program and switch back to original group with PTM.", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             if (isBilateral)
             {
                 if (!String.IsNullOrEmpty(originalRightGroup))
                 {
-                    if (CheckGroupIsCorrectFormat(originalRightGroup) && !await Task.Run(() => ChangeActiveGroup(theSummitRight, ConvertStimModelGroupToAPIGroup(originalRightGroup), rightSenseModel)))
+                    if (CheckGroupIsCorrectFormat(originalRightGroup) && !ChangeActiveGroup(theSummitRight, ConvertStimModelGroupToAPIGroup(originalRightGroup), rightSenseModel))
                     {
-                        MessageBox.Show("Could not change group for right INS to original group. Please exit program and switch back to original group with PTM.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show("Could not change group for right INS to original group. Please exit program and switch back to original group with PTM.", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -238,8 +253,8 @@ namespace SCBS.ViewModels
             try
             {
                 currentIndex = stimSweepModel.CurrentIndex;
-                totalRunsForTitration = stimSweepModel.TimeToRunInSeconds.Count();
-                timeIndicatingWhenToWriteEvent = stimSweepModel.EventMarkerDelayTimeInSeconds;
+                totalRunsForTitration = stimSweepModel.TimeToRunInMilliSeconds.Count();
+                timeIndicatingWhenToWriteEvent = stimSweepModel.EventMarkerDelayTimeInMilliSeconds;
                 totalTimeForEntireTitration = GetTotalTimeForStimSweep(stimSweepModel, currentIndex);
                 totalTimeLeftForEntireTitration = GetTotalTimeForStimSweep(stimSweepModel, currentIndex);
             }
@@ -255,7 +270,7 @@ namespace SCBS.ViewModels
             _log.Info("Stim Sweep - Orginal Group Left: " + originalLeftGroup);
             if (!CheckGroupIsCorrectFormat(originalLeftGroup))
             {
-                ErrorMessageAndLogging("Could not get original group for left INS. Please try again", "Error", true);
+                ErrorMessageAndLogging("Could not get original group for left/Unilateral INS. Please try again", "Error", true);
                 return;
             }
             if (isBilateral)
@@ -272,7 +287,7 @@ namespace SCBS.ViewModels
             //Change groups to specified in config file
             if (CheckGroupIsCorrectFormat(stimSweepModel?.LeftINSOrUnilateral?.GroupToRunStimSweep) && !ChangeActiveGroup(theSummitLeft, ConvertStimModelGroupToAPIGroup(stimSweepModel?.LeftINSOrUnilateral?.GroupToRunStimSweep), leftSenseModel))
             {
-                ErrorMessageAndLogging("Could not change group for left INS. Please try again", "Error", true);
+                ErrorMessageAndLogging("Could not change group for left/Unilateral INS. Please try again", "Error", true);
                 return;
             }
             if (isBilateral)
@@ -288,7 +303,7 @@ namespace SCBS.ViewModels
             //Get all settings from current group
             if (!ReadStimGroup(theSummitLeft, stimSweepModel?.LeftINSOrUnilateral?.GroupToRunStimSweep, true))
             {
-                ErrorMessageAndLogging("Could not read stim settings for left side. Please try again", "Error", false);
+                ErrorMessageAndLogging("Could not read stim settings for left/Unilateral side. Please try again", "Error", false);
                 return;
             }
             if (isBilateral)
@@ -303,7 +318,7 @@ namespace SCBS.ViewModels
             //Turn stim on if not already on
             if (!TurnStimTherapyOn(theSummitLeft))
             {
-                ErrorMessageAndLogging("Could not turn stim therapy on Left side. Please try again", "Error", true);
+                ErrorMessageAndLogging("Could not turn stim therapy on left/Unilateral side. Please try again", "Error", true);
                 return;
             }
             if (isBilateral)
@@ -337,12 +352,12 @@ namespace SCBS.ViewModels
                 //Set amp/program to current index.
                 if (!SetStimAmp(theSummitLeft, stimSweepModel.LeftINSOrUnilateral.AmpInmA[currentIndex], stimSweepModel.LeftINSOrUnilateral.Program[currentIndex], stimSettingsModelLeft, true))
                 {
-                    ErrorMessageAndLogging("Could not change stim amp for Left side. Please cancel and retry stim titration", "Error", false);
+                    ErrorMessageAndLogging("Could not change stim amp for left/Unilateral side. Please cancel and retry stim titration", "Error", false);
                     return;
                 }
                 if (isBilateral)
                 {
-                    if (!SetStimAmp(theSummitRight, stimSweepModel.RightINS.AmpInmA[currentIndex], stimSweepModel.RightINS.Program[currentIndex], stimSettingsModelRight, true))
+                    if (!SetStimAmp(theSummitRight, stimSweepModel.RightINS.AmpInmA[currentIndex], stimSweepModel.RightINS.Program[currentIndex], stimSettingsModelRight, false))
                     {
                         ErrorMessageAndLogging("Could not change stim amp for Right side. Please cancel and retry stim titration", "Error", false);
                         return;
@@ -351,12 +366,12 @@ namespace SCBS.ViewModels
                 //Set pw/program to current index
                 if (!SetStimPulseWidth(theSummitLeft, stimSweepModel.LeftINSOrUnilateral.PulseWidthInMicroSeconds[currentIndex], stimSweepModel.LeftINSOrUnilateral.Program[currentIndex], stimSettingsModelLeft, true))
                 {
-                    ErrorMessageAndLogging("Could not change stim pulse width for Left side. Please cancel and retry stim titration", "Error", false);
+                    ErrorMessageAndLogging("Could not change stim pulse width for left/Unilateral side. Please cancel and retry stim titration", "Error", false);
                     return;
                 }
                 if (isBilateral)
                 {
-                    if (!SetStimPulseWidth(theSummitRight, stimSweepModel.RightINS.PulseWidthInMicroSeconds[currentIndex], stimSweepModel.RightINS.Program[currentIndex], stimSettingsModelRight, true))
+                    if (!SetStimPulseWidth(theSummitRight, stimSweepModel.RightINS.PulseWidthInMicroSeconds[currentIndex], stimSweepModel.RightINS.Program[currentIndex], stimSettingsModelRight, false))
                     {
                         ErrorMessageAndLogging("Could not change stim pulse width for Right side. Please cancel and retry stim titration", "Error", false);
                         return;
@@ -365,12 +380,12 @@ namespace SCBS.ViewModels
                 //Set rate to current index
                 if (!SetStimRate(theSummitLeft, stimSweepModel.LeftINSOrUnilateral.RateInHz[currentIndex], stimSettingsModelLeft, true))
                 {
-                    ErrorMessageAndLogging("Could not change stim rate for Left side. Please cancel and retry stim titration", "Error", false);
+                    ErrorMessageAndLogging("Could not change stim rate for left/Unilateral side. Please cancel and retry stim titration", "Error", false);
                     return;
                 }
                 if (isBilateral)
                 {
-                    if (!SetStimRate(theSummitRight, stimSweepModel.RightINS.RateInHz[currentIndex], stimSettingsModelRight, true))
+                    if (!SetStimRate(theSummitRight, stimSweepModel.RightINS.RateInHz[currentIndex], stimSettingsModelRight, false))
                     {
                         ErrorMessageAndLogging("Could not change stim rate for Right side. Please cancel and retry stim titration", "Error", false);
                         return;
@@ -378,8 +393,8 @@ namespace SCBS.ViewModels
                 }
                 Messages.Insert(0, "\nStim Titration Run Number " + (currentIndex+1) + " of " + totalRunsForTitration);
                 //Set timer to run for timeToRun amount
-                int? timeToRunForCurrentStimSweepIndex = stimSweepModel?.TimeToRunInSeconds[currentIndex];
-                int? timeMarkerToAddEvent = timeToRunForCurrentStimSweepIndex - timeIndicatingWhenToWriteEvent;
+                uint? timeToRunForCurrentStimSweepIndex = stimSweepModel?.TimeToRunInMilliSeconds[currentIndex];
+                int? timeMarkerToAddEvent = (int)timeToRunForCurrentStimSweepIndex - timeIndicatingWhenToWriteEvent;
                 bool startTimeHasRunLeft = false;
                 bool stopTimeHasRunLeft = false;
                 bool startTimeHasRunRight = false;
@@ -392,7 +407,7 @@ namespace SCBS.ViewModels
                 while(timeToRunForCurrentStimSweepIndex > 0)
                 {
                     //Log the start time in the event log when the time has been passed based on value from configfile
-                    if (timeToRunForCurrentStimSweepIndex == timeMarkerToAddEvent && !startTimeHasRunLeft)
+                    if (timeToRunForCurrentStimSweepIndex <= timeMarkerToAddEvent && !startTimeHasRunLeft)
                     {
                         try
                         {
@@ -414,7 +429,7 @@ namespace SCBS.ViewModels
                     }
                     if (isBilateral)
                     {
-                        if (timeToRunForCurrentStimSweepIndex == timeMarkerToAddEvent && !startTimeHasRunRight)
+                        if (timeToRunForCurrentStimSweepIndex <= timeMarkerToAddEvent && !startTimeHasRunRight)
                         {
                             try
                             {
@@ -436,7 +451,7 @@ namespace SCBS.ViewModels
                         }
                     }
                     //Log the end time in the event log when the time has been passed based on value from configfile
-                    if (timeToRunForCurrentStimSweepIndex == timeIndicatingWhenToWriteEvent && !stopTimeHasRunLeft)
+                    if (timeToRunForCurrentStimSweepIndex <= timeIndicatingWhenToWriteEvent && !stopTimeHasRunLeft)
                     {
                         try
                         {
@@ -458,7 +473,7 @@ namespace SCBS.ViewModels
                     }
                     if (isBilateral)
                     {
-                        if (timeToRunForCurrentStimSweepIndex == timeIndicatingWhenToWriteEvent && !stopTimeHasRunRight)
+                        if (timeToRunForCurrentStimSweepIndex <= timeIndicatingWhenToWriteEvent && !stopTimeHasRunRight)
                         {
                             try
                             {
@@ -479,11 +494,11 @@ namespace SCBS.ViewModels
                             }
                         }
                     }
-                    timeToRunForCurrentStimSweepIndex--;
+                    timeToRunForCurrentStimSweepIndex -= 100;
                     int precentageDoneForTotalStimSweep = 100 - (int)Math.Round((double)(100 * totalTimeLeftForEntireTitration) / totalTimeForEntireTitration);
-                    totalTimeLeftForEntireTitration--;
+                    totalTimeLeftForEntireTitration -= 100;
                     CurrentProgress = precentageDoneForTotalStimSweep;
-                    TimeSpan time = TimeSpan.FromSeconds(totalTimeLeftForEntireTitration);
+                    TimeSpan time = TimeSpan.FromMilliseconds(totalTimeLeftForEntireTitration);
                     //here backslash is must to tell that colon is
                     //not the part of format, it just a character that we want in output
                     string str = time.ToString(@"hh\:mm\:ss");
@@ -492,24 +507,39 @@ namespace SCBS.ViewModels
                     {
                         ProgressText = "Changing Stim Therapy...";
                     }
-                    Thread.Sleep(1000);
+                    Thread.Sleep(100);
                 } 
             }
             CurrentProgress = 100;
             ProgressText = "Finished Successfully";
-            //Log that stim titration has finished
-            if (!LogEventEntry(theSummitLeft, "Finish Stim Titration", stimSettingsModelLeft, stimSweepModel.LeftINSOrUnilateral.Program[currentIndex]))
+            ExitCancelButtonText = "Exit";
+            //Doing this for now to get working and debug
+            try
             {
-                Messages.Insert(0, DateTime.Now + ":: Error: Could not log event entry for stim sweep finish.");
-            }
-            if (isBilateral)
-            {
-                if (!LogEventEntry(theSummitRight, "Finish Stim Titration", stimSettingsModelRight, stimSweepModel.RightINS.Program[currentIndex]))
+                theSummitLeft.LogCustomEvent(DateTime.Now, DateTime.Now, "Finish Stim Titration : " + DateTime.Now.ToString("MM_dd_yyyy hh:mm:ss tt"), null);
+                if (isBilateral)
                 {
-                    Messages.Insert(0, DateTime.Now + ":: Error: Could not log event entry for stim sweep finish.");
+                    theSummitRight.LogCustomEvent(DateTime.Now, DateTime.Now, "Finish Stim Titration : " + DateTime.Now.ToString("MM_dd_yyyy hh:mm:ss tt"), null);
+
                 }
+            }catch(Exception e)
+            {
+                _log.Error(e);
             }
             _log.Info("Stim Sweep - Finished Logging Finish of stim titration");
+            //Doesn't execute past this part
+            //Log that stim titration has finished
+            //if (!LogEventEntry(theSummitLeft, "Finish Stim Titration", stimSettingsModelLeft, stimSweepModel.LeftINSOrUnilateral.Program[currentIndex]))
+            //{
+            //    Messages.Insert(0, DateTime.Now + ":: Error: Could not log event entry for stim sweep finish.");
+            //}
+            //if (isBilateral)
+            //{
+            //    if (!LogEventEntry(theSummitRight, "Finish Stim Titration", stimSettingsModelRight, stimSweepModel.RightINS.Program[currentIndex]))
+            //    {
+            //        Messages.Insert(0, DateTime.Now + ":: Error: Could not log event entry for stim sweep finish.");
+            //    }
+            //}
         }
 
         #region Medtronic API Calls
@@ -710,7 +740,7 @@ namespace SCBS.ViewModels
                                 stimSettingsModelLeft.StimAmpProgram3 = ampOutputFromDevice.Value;
                                 break;
                         }
-                        Messages.Insert(0, DateTime.Now + ":: Left stim amp: " + ampOutputFromDevice.Value + " Program: " + program);
+                        Messages.Insert(0, DateTime.Now + ":: Left/Unilateral stim amp: " + ampOutputFromDevice.Value + " Program: " + program);
                     }
                     else
                     {
@@ -817,7 +847,7 @@ namespace SCBS.ViewModels
                                 stimSettingsModelLeft.PulseWidthProgram3 = pwOutputFromDevice.Value;
                                 break;
                         }
-                        Messages.Insert(0, DateTime.Now + ":: Left Stim Pulse Width: " + pwOutputFromDevice.Value + " Program: " + program);
+                        Messages.Insert(0, DateTime.Now + ":: Left/Unilateral Stim Pulse Width: " + pwOutputFromDevice.Value + " Program: " + program);
                     }
                     else
                     {
@@ -899,7 +929,7 @@ namespace SCBS.ViewModels
                     if (isLeft)
                     {
                         stimSettingsModelLeft.StimRate = rateOutputFromDevice.Value;
-                        Messages.Insert(0, DateTime.Now + ":: Left Stim rate: " + rateOutputFromDevice.Value);
+                        Messages.Insert(0, DateTime.Now + ":: Left/Unilateral Stim rate: " + rateOutputFromDevice.Value);
                     }
                     else
                     {
@@ -938,6 +968,14 @@ namespace SCBS.ViewModels
                     if (counter < 5)
                     {
                         Thread.Sleep(400);
+                    }
+                    // Reset POR if set
+                    if (bufferReturnInfo.RejectCodeType == typeof(MasterRejectCode)
+                        && (MasterRejectCode)bufferReturnInfo.RejectCode == MasterRejectCode.ChangeTherapyPor)
+                    {
+                        ResetPOR(localSummit);
+                        _log.Info("Turn stim therapy on after resetPOR success in update DBS button click");
+                        continue;
                     }
                     counter--;
                 } while ((bufferReturnInfo.RejectCode != 0) && (bufferReturnInfo.RejectCode != 8225) && counter > 0);
@@ -1014,27 +1052,69 @@ namespace SCBS.ViewModels
                     Thread.Sleep(400);
                 }
                 counter--;
+                _log.Info("Current group in stim sweep: " + currentGroup);
             } while (String.IsNullOrEmpty(currentGroup) && counter > 0);
             //remove the Group text before the acutal group
             return currentGroup.Remove(0, 6);
         }
+
+        /// <summary>
+        /// Resets the POR bit if it was set
+        /// </summary>
+        /// <param name="localSummit">SummitSystem for the api call</param>
+        private void ResetPOR(SummitSystem localSummit)
+        {
+            APIReturnInfo bufferReturnInfo;
+            _log.Info("POR was set, resetting...");
+            Messages.Insert(0, DateTime.Now + ":: -POR was set, resetting...");
+            try
+            {
+                // reset POR
+                bufferReturnInfo = localSummit.ResetErrorFlags(Medtronic.NeuroStim.Olympus.DataTypes.Core.StatusBits.Por);
+                if (!CheckForReturnError(bufferReturnInfo, "Reset POR", _log))
+                {
+                    return;
+                }
+
+                // check battery
+                BatteryStatusResult theStatus;
+                localSummit.ReadBatteryLevel(out theStatus);
+                if (!CheckForReturnError(bufferReturnInfo, "Checking Battery Level for Reset POR", _log))
+                {
+                    return;
+                }
+                // perform interrogate command and check if therapy is enabled.s
+                GeneralInterrogateData interrogateBuffer;
+                localSummit.ReadGeneralInfo(out interrogateBuffer);
+                if (interrogateBuffer.IsTherapyUnavailable)
+                {
+                    _log.Warn("Therapy still unavailable after POR reset");
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                Messages.Insert(0, DateTime.Now + ":: --ERROR: Reset POR bit");
+                _log.Error(e);
+            }
+        }
         #endregion
 
         #region Helper Methods
-        private int GetTotalTimeForStimSweep(StimSweepModel localModel, int indexFromCurentIndexOfConfig)
+        private uint GetTotalTimeForStimSweep(StimSweepModel localModel, int indexFromCurentIndexOfConfig)
         {
-            if(localModel == null || localModel.TimeToRunInSeconds == null)
+            if(localModel == null || localModel.TimeToRunInMilliSeconds == null)
             {
                 return 0;
             }
-            if(indexFromCurentIndexOfConfig >= localModel.TimeToRunInSeconds.Count())
+            if(indexFromCurentIndexOfConfig >= localModel.TimeToRunInMilliSeconds.Count())
             {
                 return 0;
             }
-            int totalCount = 0;
-            for(int i = indexFromCurentIndexOfConfig; i < localModel.TimeToRunInSeconds.Count(); i++)
+            uint totalCount = 0;
+            for(int i = indexFromCurentIndexOfConfig; i < localModel.TimeToRunInMilliSeconds.Count(); i++)
             {
-                totalCount += localModel.TimeToRunInSeconds[i];
+                totalCount += localModel.TimeToRunInMilliSeconds[i];
             }
             return totalCount;
         }
@@ -1063,6 +1143,24 @@ namespace SCBS.ViewModels
         }
         #endregion
 
+        /// <summary>
+        /// Checks for return error code from APIReturnInfo from Medtronic
+        /// If there is an error, the method calls error handling method SetEmbeddedOffGroupAStimOnWhenErrorOccurs() to turn embedded off, change to group A and turn Stim ON
+        /// The Error location and error descriptor from the returned API call are displayed to user in a message box.
+        /// </summary>
+        /// <param name="info">The APIReturnInfo value returned from the Medtronic API call</param>
+        /// <param name="errorLocation">The location where the error is being check. Can be turning stim on, changing group, etc</param>
+        /// <param name="log">caliburn micro log</param>
+        /// <returns>True if there was an error or false if no error</returns>
+        private bool CheckForReturnError(APIReturnInfo info, string errorLocation, ILog log)
+        {
+            if (info.RejectCode != 0)
+            {
+                log.Warn("Reject code: " + info.RejectCode + ". Reject description: " + info.Descriptor + ". Location: " + errorLocation);
+                return false;
+            }
+            return true;
+        }
         private void ErrorMessageAndLogging(string message, string title, bool enableStartButton)
         {
             try

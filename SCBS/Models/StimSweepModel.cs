@@ -24,13 +24,13 @@ namespace SCBS.Models
         /// </summary>
         public RightINS RightINS { get; set; }
         /// <summary>
-        /// Time to run each stim sweep in seconds
+        /// Time to run each stim sweep in milliseconds
         /// </summary>
-        public List<int> TimeToRunInSeconds { get; set; }
+        public List<uint> TimeToRunInMilliSeconds { get; set; }
         /// <summary>
-        /// Amount of time in seconds to put the event start and event stop event marker
+        /// Amount of time in milliseconds to put the event start and event stop event marker
         /// </summary>
-        public int EventMarkerDelayTimeInSeconds { get; set; }
+        public int EventMarkerDelayTimeInMilliSeconds { get; set; }
         /// <summary>
         /// Current index to start the stim sweep at
         /// </summary>

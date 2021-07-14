@@ -43,12 +43,12 @@ namespace SCBS.ViewModels
                 Mat m = new Mat();
                 capture.Retrieve(m);
 
-                System.Windows.Media.Imaging.BitmapSource bitmapSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-  m.ToImage<Bgr, byte>().Bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
-  System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
-                System.Windows.Media.Imaging.WriteableBitmap writeableBitmap = new System.Windows.Media.Imaging.WriteableBitmap(bitmapSource);
+                //System.Windows.Media.Imaging.BitmapSource bitmapSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                //m.ToImage<Bgr, byte>().Bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
+                //System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+                //System.Windows.Media.Imaging.WriteableBitmap writeableBitmap = new System.Windows.Media.Imaging.WriteableBitmap(bitmapSource);
 
-                VideoPlayback = writeableBitmap;
+                //VideoPlayback = writeableBitmap;
 
             }
             catch

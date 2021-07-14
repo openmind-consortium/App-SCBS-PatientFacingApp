@@ -140,6 +140,9 @@ namespace SCBS.Models
                                     'items': {
                                       'type': 'number'
                                     }
+                                  },
+                                  'TdEvokedResponseEnable': {
+                                    'type': 'number'
                                   }
                                 }
                               }
@@ -171,6 +174,9 @@ namespace SCBS.Models
                                 },
                                 'WindowEnabled': {
                                   'type': 'boolean'
+                                },
+                                'StreamOffsetBins': {
+                                  'type': 'number'
                                 }
                               }
                             },
@@ -240,251 +246,494 @@ namespace SCBS.Models
                     }";
 
         private string adaptiveSchema = @"{
-                              'type': 'object',
-                              'required': [],
-                              'properties': {
-                                'eventType': {
                                   'type': 'object',
                                   'required': [],
                                   'properties': {
-                                    'comment': {
-                                      'type': 'string'
-                                    }
-                                  }
-                                },
-                                'Detection': {
-                                  'type': 'object',
-                                  'required': [],
-                                  'properties': {
-                                    'LD0': {
+                                    'eventType': {
                                       'type': 'object',
                                       'required': [],
                                       'properties': {
                                         'comment': {
                                           'type': 'string'
-                                        },
-                                        'B0': {
-                                          'type': 'number'
-                                        },
-                                        'B1': {
-                                          'type': 'number'
-                                        },
-                                        'UpdateRate': {
-                                          'type': 'number'
-                                        },
-                                        'OnsetDuration': {
-                                          'type': 'number'
-                                        },
-                                        'TerminationDuration': {
-                                          'type': 'number'
-                                        },
-                                        'HoldOffOnStartupTime': {
-                                          'type': 'number'
-                                        },
-                                        'StateChangeBlankingUponStateChange': {
-                                          'type': 'number'
-                                        },
-                                        'FractionalFixedPointValue': {
-                                          'type': 'number'
-                                        },
-                                        'DualThreshold': {
-                                          'type': 'boolean'
-                                        },
-                                        'BlankBothLD': {
-                                          'type': 'boolean'
-                                        },
-                                        'Inputs': {
+                                        }
+                                      }
+                                    },
+                                    'Detection': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'LD0': {
                                           'type': 'object',
                                           'required': [],
                                           'properties': {
-                                            'Ch0Band0': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'B0': {
+                                              'type': 'number'
+                                            },
+                                            'B1': {
+                                              'type': 'number'
+                                            },
+                                            'UpdateRate': {
+                                              'type': 'number'
+                                            },
+                                            'OnsetDuration': {
+                                              'type': 'number'
+                                            },
+                                            'TerminationDuration': {
+                                              'type': 'number'
+                                            },
+                                            'HoldOffOnStartupTime': {
+                                              'type': 'number'
+                                            },
+                                            'StateChangeBlankingUponStateChange': {
+                                              'type': 'number'
+                                            },
+                                            'FractionalFixedPointValue': {
+                                              'type': 'number'
+                                            },
+                                            'DualThreshold': {
                                               'type': 'boolean'
                                             },
-                                            'Ch0Band1': {
+                                            'BlankBothLD': {
                                               'type': 'boolean'
                                             },
-                                            'Ch1Band0': {
-                                              'type': 'boolean'
+                                            'Inputs': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'Ch0Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch0Band1': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch1Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch1Band1': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch2Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch2Band1': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch3Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch3Band1': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
                                             },
-                                            'Ch1Band1': {
-                                              'type': 'boolean'
+                                            'WeightVector': {
+                                              'type': 'array',
+                                              'items': {
+                                                'type': 'number'
+                                              }
                                             },
-                                            'Ch2Band0': {
-                                              'type': 'boolean'
+                                            'NormalizationMultiplyVector': {
+                                              'type': 'array',
+                                              'items': {
+                                                'type': 'number'
+                                              }
                                             },
-                                            'Ch2Band1': {
-                                              'type': 'boolean'
-                                            },
-                                            'Ch3Band0': {
-                                              'type': 'boolean'
-                                            },
-                                            'Ch3Band1': {
-                                              'type': 'boolean'
+                                            'NormalizationSubtractVector': {
+                                              'type': 'array',
+                                              'items': {
+                                                'type': 'number'
+                                              }
                                             }
                                           }
                                         },
-                                        'WeightVector': {
-                                          'type': 'array',
-                                          'items': {
-                                            'type': 'number'
-                                          }
-                                        },
-                                        'NormalizationMultiplyVector': {
-                                          'type': 'array',
-                                          'items': {
-                                            'type': 'number'
-                                          }
-                                        },
-                                        'NormalizationSubtractVector': {
-                                          'type': 'array',
-                                          'items': {
-                                            'type': 'number'
+                                        'LD1': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'B0': {
+                                              'type': 'number'
+                                            },
+                                            'B1': {
+                                              'type': 'number'
+                                            },
+                                            'UpdateRate': {
+                                              'type': 'number'
+                                            },
+                                            'OnsetDuration': {
+                                              'type': 'number'
+                                            },
+                                            'TerminationDuration': {
+                                              'type': 'number'
+                                            },
+                                            'HoldOffOnStartupTime': {
+                                              'type': 'number'
+                                            },
+                                            'StateChangeBlankingUponStateChange': {
+                                              'type': 'number'
+                                            },
+                                            'FractionalFixedPointValue': {
+                                              'type': 'number'
+                                            },
+                                            'DualThreshold': {
+                                              'type': 'boolean'
+                                            },
+                                            'BlankBothLD': {
+                                              'type': 'boolean'
+                                            },
+                                            'Inputs': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'Ch0Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch0Band1': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch1Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch1Band1': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch2Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch2Band1': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch3Band0': {
+                                                  'type': 'boolean'
+                                                },
+                                                'Ch3Band1': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'WeightVector': {
+                                              'type': 'array',
+                                              'items': {
+                                                'type': 'number'
+                                              }
+                                            },
+                                            'NormalizationMultiplyVector': {
+                                              'type': 'array',
+                                              'items': {
+                                                'type': 'number'
+                                              }
+                                            },
+                                            'NormalizationSubtractVector': {
+                                              'type': 'array',
+                                              'items': {
+                                                'type': 'number'
+                                              }
+                                            }
                                           }
                                         }
                                       }
                                     },
-                                    'LD1': {
+                                    'Adaptive': {
                                       'type': 'object',
                                       'required': [],
                                       'properties': {
-                                        'comment': {
-                                          'type': 'string'
-                                        },
-                                        'B0': {
-                                          'type': 'number'
-                                        },
-                                        'B1': {
-                                          'type': 'number'
-                                        },
-                                        'UpdateRate': {
-                                          'type': 'number'
-                                        },
-                                        'OnsetDuration': {
-                                          'type': 'number'
-                                        },
-                                        'TerminationDuration': {
-                                          'type': 'number'
-                                        },
-                                        'HoldOffOnStartupTime': {
-                                          'type': 'number'
-                                        },
-                                        'StateChangeBlankingUponStateChange': {
-                                          'type': 'number'
-                                        },
-                                        'FractionalFixedPointValue': {
-                                          'type': 'number'
-                                        },
-                                        'DualThreshold': {
-                                          'type': 'boolean'
-                                        },
-                                        'BlankBothLD': {
-                                          'type': 'boolean'
-                                        },
-                                        'Inputs': {
+                                        'Program0': {
                                           'type': 'object',
                                           'required': [],
                                           'properties': {
-                                            'Ch0Band0': {
-                                              'type': 'boolean'
+                                            'comment': {
+                                              'type': 'string'
                                             },
-                                            'Ch0Band1': {
-                                              'type': 'boolean'
+                                            'RiseTimes': {
+                                              'type': 'number'
                                             },
-                                            'Ch1Band0': {
-                                              'type': 'boolean'
+                                            'FallTimes': {
+                                              'type': 'number'
                                             },
-                                            'Ch1Band1': {
-                                              'type': 'boolean'
+                                            'RateTargetInHz': {
+                                              'type': 'number'
                                             },
-                                            'Ch2Band0': {
-                                              'type': 'boolean'
+                                            'State0AmpInMilliamps': {
+                                              'type': 'number'
                                             },
-                                            'Ch2Band1': {
-                                              'type': 'boolean'
+                                            'State1AmpInMilliamps': {
+                                              'type': 'number'
                                             },
-                                            'Ch3Band0': {
-                                              'type': 'boolean'
+                                            'State2AmpInMilliamps': {
+                                              'type': 'number'
                                             },
-                                            'Ch3Band1': {
-                                              'type': 'boolean'
+                                            'State3AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State4AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State5AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State6AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State7AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State8AmpInMilliamps': {
+                                              'type': 'number'
                                             }
                                           }
                                         },
-                                        'WeightVector': {
-                                          'type': 'array',
-                                          'items': {
-                                            'type': 'number'
+                                        'Program1': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'RiseTimes': {
+                                              'type': 'number'
+                                            },
+                                            'FallTimes': {
+                                              'type': 'number'
+                                            },
+                                            'State0AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State1AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State2AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State3AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State4AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State5AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State6AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State7AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State8AmpInMilliamps': {
+                                              'type': 'number'
+                                            }
                                           }
                                         },
-                                        'NormalizationMultiplyVector': {
-                                          'type': 'array',
-                                          'items': {
-                                            'type': 'number'
+                                        'Program2': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'RiseTimes': {
+                                              'type': 'number'
+                                            },
+                                            'FallTimes': {
+                                              'type': 'number'
+                                            },
+                                            'State0AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State1AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State2AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State3AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State4AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State5AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State6AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State7AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State8AmpInMilliamps': {
+                                              'type': 'number'
+                                            }
                                           }
                                         },
-                                        'NormalizationSubtractVector': {
-                                          'type': 'array',
-                                          'items': {
-                                            'type': 'number'
+                                        'Program3': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'RiseTimes': {
+                                              'type': 'number'
+                                            },
+                                            'FallTimes': {
+                                              'type': 'number'
+                                            },
+                                            'State0AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State1AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State2AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State3AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State4AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State5AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State6AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State7AmpInMilliamps': {
+                                              'type': 'number'
+                                            },
+                                            'State8AmpInMilliamps': {
+                                              'type': 'number'
+                                            }
+                                          }
+                                        },
+                                        'Rates': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'State0': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State1': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State2': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State3': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State4': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State5': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State6': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State7': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'State8': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'RateTargetInHz': {
+                                                  'type': 'number'
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            }
                                           }
                                         }
                                       }
                                     }
                                   }
-                                },
-                                'Adaptive': {
-                                  'type': 'object',
-                                  'required': [],
-                                  'properties': {
-                                    'Program0': {
-                                      'type': 'object',
-                                      'required': [],
-                                      'properties': {
-		                              'comment': {
-                                          'type': 'string'
-                                        },
-                                        'RiseTimes': {
-                                          'type': 'number'
-                                        },
-                                        'FallTimes': {
-                                          'type': 'number'
-                                        },
-                                        'RateTargetInHz': {
-                                          'type': 'number'
-                                        },
-                                        'State0AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                        'State1AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                        'State2AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                          'State3AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                        'State4AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                        'State5AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                          'State6AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                        'State7AmpInMilliamps': {
-                                          'type': 'number'
-                                        },
-                                        'State8AmpInMilliamps': {
-                                          'type': 'number'
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }";
+                                }";
 
         private string reportSchema = @"{
                           'type': 'object',
@@ -509,128 +758,221 @@ namespace SCBS.Models
                         }";
 
         private string applicationSchema = @"{
+                              'type': 'object',
+                              'required': [],
+                              'properties': {
+                                'comment': {
+                                  'type': 'string'
+                                },
+                                'BasePathToJSONFiles': {
+                                  'type': 'string'
+                                },
+                                'TurnOnResearcherTools': {
+                                  'type': 'boolean'
+                                },
+                                'RunLeadIntegrityTestOnStartup': {
+                                  'type': 'boolean'
+                                },
+                                'Bilateral': {
+                                  'type': 'boolean'
+                                },
+                                'Switch': {
+                                  'type': 'boolean'
+                                },
+                                'Align': {
+                                  'type': 'boolean'
+                                },
+                                'Montage': {
+                                  'type': 'boolean'
+                                },
+                                'StimSweep': {
+                                  'type': 'boolean'
+                                },
+                                'NewSession': {
+                                  'type': 'boolean'
+                                },
+                                'HideReportButton': {
+                                  'type': 'boolean'
+                                },
+                                'GetAdaptiveLogInfo': {
+                                  'type': 'boolean'
+                                },
+                                'GetAdaptiveMirrorInfo': {
+                                  'type': 'boolean'
+                                },
+                                'VerboseLogOnForMedtronic': {
+                                  'type': 'boolean'
+                                },
+                                'LogBeepEvent': {
+                                  'type': 'boolean'
+                                },
+                                'CTMBeepEnables': {
+                                  'type': 'object',
+                                  'required': [],
+                                  'properties': {
+                                    'comment': {
+                                      'type': 'string'
+                                    },
+                                    'None': {
+                                      'type': 'boolean'
+                                    },
+                                    'GeneralAlert': {
+                                      'type': 'boolean'
+                                    },
+                                    'TelMCompleted': {
+                                      'type': 'boolean'
+                                    },
+                                    'DeviceDiscovered': {
+                                      'type': 'boolean'
+                                    },
+                                    'NoDeviceDiscovered': {
+                                      'type': 'boolean'
+                                    },
+                                    'TelMLost': {
+                                      'type': 'boolean'
+                                    }
+                                  }
+                                },
+                                'WebPageButtons': {
+                                  'type': 'object',
+                                  'required': [],
+                                  'properties': {
+                                    'comment': {
+                                      'type': 'string'
+                                    },
+                                    'OpenWithoutBeingConnected': {
+                                      'type': 'boolean'
+                                    },
+                                    'WebPageOneButtonEnabled': {
+                                      'type': 'boolean'
+                                    },
+                                    'WebPageOneURL': {
+                                      'type': 'string'
+                                    },
+                                    'WebPageOneButtonText': {
+                                      'type': 'string'
+                                    },
+                                    'WebPageTwoButtonEnabled': {
+                                      'type': 'boolean'
+                                    },
+                                    'WebPageTwoURL': {
+                                      'type': 'string'
+                                    },
+                                    'WebPageTwoButtonText': {
+                                      'type': 'string'
+                                    }
+                                  }
+                                },
+                                'MoveGroupButton': {
+                                  'type': 'object',
+                                  'required': [],
+                                  'properties': {
+                                    'comment': {
+                                      'type': 'string'
+                                    },
+                                    'MoveGroupButtonText': {
+                                      'type': 'string'
+                                    },
+                                    'MoveGroupButtonEnabled': {
+                                      'type': 'boolean'
+                                    },
+                                    'GroupToMoveToLeftUnilateral': {
+                                      'type': 'string'
+                                    },
+                                    'GroupToMoveToRight': {
+                                      'type': 'string'
+                                    }
+                                  }
+                                },
+                                'LogDownloadButton': {
+                                  'type': 'object',
+                                  'required': [],
+                                  'properties': {
+                                    'comment': {
+                                      'type': 'string'
+                                    },
+                                    'LogDownloadButtonText': {
+                                      'type': 'string'
+                                    },
+                                    'LogDownloadButtonEnabled': {
+                                      'type': 'boolean'
+                                    },
+                                    'LogTypesToDownload': {
                                       'type': 'object',
                                       'required': [],
                                       'properties': {
-                                        'comment': {
-                                          'type': 'string'
-                                        },
-                                        'BasePathToJSONFiles': {
-                                          'type': 'string'
-                                        },
-                                        'Bilateral': {
+                                        'ApplicationLog': {
                                           'type': 'boolean'
                                         },
-                                        'Switch': {
+                                        'EventLog': {
                                           'type': 'boolean'
                                         },
-                                        'Align': {
+                                        'MirrorLog': {
                                           'type': 'boolean'
-                                        },
-                                        'Montage': {
-                                          'type': 'boolean'
-                                        },
-                                        'StimSweep': {
-                                          'type': 'boolean'
-                                        },
-                                        'NewSession': {
-                                          'type': 'boolean'
-                                        },
-                                        'HideReportButton': {
-                                          'type': 'boolean'
-                                        },
-                                        'GetAdaptiveLogInfo': {
-                                          'type': 'boolean'
-                                        },
-                                        'GetAdaptiveMirrorInfo': {
-                                          'type': 'boolean'
-                                        },
-                                        'VerboseLogOnForMedtronic': {
-                                          'type': 'boolean'
-                                        },
-                                        'LogBeepEvent': {
-                                          'type': 'boolean'
-                                        },
-                                        'CTMBeepEnables': {
-                                          'type': 'object',
-                                          'required': [],
-                                          'properties': {
-                                            'comment': {
-                                              'type': 'string'
-                                            },
-                                            'None': {
-                                              'type': 'boolean'
-                                            },
-                                            'GeneralAlert': {
-                                              'type': 'boolean'
-                                            },
-                                            'TelMCompleted': {
-                                              'type': 'boolean'
-                                            },
-                                            'DeviceDiscovered': {
-                                              'type': 'boolean'
-                                            },
-                                            'NoDeviceDiscovered': {
-                                              'type': 'boolean'
-                                            },
-                                            'TelMLost': {
-                                              'type': 'boolean'
-                                            }
-                                          }
-                                        },
-                                        'WebPageButtons': {
-                                          'type': 'object',
-                                          'required': [],
-                                          'properties': {
-                                            'comment': {
-                                              'type': 'string'
-                                            },
-                                            'OpenWithoutBeingConnected': {
-                                              'type': 'boolean'
-                                            },
-                                            'WebPageOneButtonEnabled': {
-                                              'type': 'boolean'
-                                            },
-                                            'WebPageOneURL': {
-                                              'type': 'string'
-                                            },
-                                            'WebPageOneButtonText': {
-                                              'type': 'string'
-                                            },
-                                            'WebPageTwoButtonEnabled': {
-                                              'type': 'boolean'
-                                            },
-                                            'WebPageTwoURL': {
-                                              'type': 'string'
-                                            },
-                                            'WebPageTwoButtonText': {
-                                              'type': 'string'
-                                            }
-                                          }
-                                        },
-                                          'MoveGroupButton': {
-                                          'type': 'object',
-                                          'required': [],
-                                          'properties': {
-                                            'comment': {
-                                              'type': 'string'
-                                            },
-                                            'MoveGroupButtonText': {
-                                              'type': 'string'
-                                            },
-                                            'MoveGroupButtonEnabled': {
-                                              'type': 'boolean'
-                                            },
-                                            'GroupToMoveToLeftUnilateral': {
-                                              'type': 'string'
-                                            },
-                                            'GroupToMoveToRight': {
-                                              'type': 'string'
-                                            },
-                                          }
                                         }
                                       }
-                                    }";
+                                    }
+                                  }
+                                },
+                                'StimDisplaySettings': {
+                                  'type': 'object',
+                                  'required': [],
+                                  'properties': {
+                                    'comment': {
+                                      'type': 'string'
+                                    },
+                                    'LeftUnilateralSettings': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'HideGroup': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideAmp': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideRate': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideStimContacts': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideTherapyOnOff': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideAdaptiveOn': {
+                                          'type': 'boolean'
+                                        }
+                                      }
+                                    },
+                                    'RightSettings': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'HideGroup': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideAmp': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideRate': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideStimContacts': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideTherapyOnOff': {
+                                          'type': 'boolean'
+                                        },
+                                        'HideAdaptiveOn': {
+                                          'type': 'boolean'
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }";
 
         private string masterSwitchSchema = @"{
                           'type': 'object',
@@ -761,13 +1103,13 @@ namespace SCBS.Models
                                             }
                                           }
                                         },
-                                        'TimeToRunInSeconds': {
+                                        'TimeToRunInMilliSeconds': {
                                           'type': 'array',
                                           'items': {
                                             'type': 'number'
                                           }
                                         },
-                                        'EventMarkerDelayTimeInSeconds': {
+                                        'EventMarkerDelayTimeInMilliSeconds': {
                                           'type': 'number'
                                         },
                                         'CurrentIndex': {

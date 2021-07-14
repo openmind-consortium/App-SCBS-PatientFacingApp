@@ -26,7 +26,7 @@
         <ListBox x:Name="Messages" FontSize="22"  Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="4" Grid.RowSpan="3" Margin="0, 0, 0, 10"/>
         <!--Row 4-->
         <Button x:Name="StimSweepButtonClick" Content="Start" IsEnabled="{Binding IsStimSweepButtonEnabled}"  Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
-        <Button x:Name="CancelButtonClick" Content="Cancel" Grid.Column="2" Grid.Row="4" Grid.ColumnSpan="2" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
+        <Button x:Name="CancelButtonClick" Content="{Binding ExitCancelButtonText}" Grid.Column="2" Grid.Row="4" Grid.ColumnSpan="2" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
 
         <!--On top of other views-->
         <Grid Width="400" Height="75" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" Grid.RowSpan="3" Visibility="{Binding ProgressVisibility}">

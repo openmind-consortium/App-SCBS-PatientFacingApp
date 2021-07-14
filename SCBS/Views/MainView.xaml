@@ -5,129 +5,407 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         xmlns:local="clr-namespace:SCBS.Views"
-        mc:Ignorable="d" WindowState="Maximized" WindowStyle="None" 
-        Title="Summit Continuous Bilateral Streaming Application" WindowStartupLocation="CenterScreen" Height="450" Width="800" FontSize="26">
+        mc:Ignorable="d" WindowState="Maximized" WindowStyle="{Binding WindowStyleForMainWindow}" 
+        Title="{Binding ApplicationTitleText}" WindowStartupLocation="CenterScreen" Height="800" Width="1200" FontSize="26">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="Converter" />
+        <Style x:Key="textWrapper" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="borderStyle" BorderBrush="Blue" BorderThickness="1" Background="{TemplateBinding Background}" >
+                            <TextBlock TextAlignment="Center" VerticalAlignment="Center" Text="{TemplateBinding Content}" TextWrapping="Wrap"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="borderStyle" Property="Background" Value="White" />
+                                <Setter TargetName="borderStyle" Property="BorderBrush" Value="DarkGray" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="true">
+                                <Setter Property = "Foreground" Value="GhostWhite"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="LightBlue"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="textWrapperRedBorder" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="borderStyle" BorderBrush="Red" BorderThickness="3" Background="{TemplateBinding Background}" >
+                            <TextBlock TextAlignment="Center" VerticalAlignment="Center" Text="{TemplateBinding Content}" TextWrapping="Wrap"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="borderStyle" Property="Background" Value="White" />
+                                <Setter TargetName="borderStyle" Property="BorderBrush" Value="DarkGray" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="true">
+                                <Setter Property = "Foreground" Value="GhostWhite"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="LightBlue"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <TabControl>
+        <TabItem Header="Patient" Visibility="{Binding TabVisibility}">
+           
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!--Row 0-->
-        <Button x:Name="SwitchButtonClick" Content="Switch" Grid.Column="0" Grid.Row="0" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding IsSwitchVisible, Converter={StaticResource Converter}}"/>
-        <Button x:Name="AlignButtonClick" Content="Align" Grid.Column="1" Grid.Row="0" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding IsAlignVisible, Converter={StaticResource Converter}}"/>
-        <StackPanel Grid.Column="2" Grid.Row ="0" Margin="10" VerticalAlignment="Center" Orientation="Horizontal">
-            <TextBlock Text ="Laptop Battery: " HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding LaptopBatteryLevel}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text ="%" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </StackPanel>
-        
-        <Button x:Name="ExitButtonClick" Content="Exit Program" Grid.Column="3" Grid.Row="0" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
-
-        <!--Row 1-->
-        <Border x:Name="border_ctm_left" Grid.Column="0" Grid.Row ="1" Background="{Binding BorderCTMLeftBackground}" CornerRadius="20" Margin="5, 25, 5, 25"/>
-        <StackPanel Grid.Column="0" Grid.Row ="1" Margin="10" VerticalAlignment="Center" Orientation="Vertical">
-            <StackPanel.OpacityMask>
-                <VisualBrush Visual="{Binding ElementName=border_ctm_left}"/>
-            </StackPanel.OpacityMask>
-            <TextBlock Text="{Binding CTMLeftText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock x:Name ="CTMLeftBatteryLevel" HorizontalAlignment="Center"/>
-        </StackPanel>
-
-        <Border x:Name="border_ctm_right" Grid.Column="2" Grid.Row ="1" Background="{Binding BorderCTMRightBackground}" CornerRadius="20" Margin="5, 25, 5, 25" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}"/>
-        <StackPanel Grid.Column="2" Grid.Row ="1" Margin="10" VerticalAlignment="Center" Orientation="Vertical" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}">
-            <StackPanel.OpacityMask>
-                <VisualBrush Visual="{Binding ElementName=border_ctm_right}"/>
-            </StackPanel.OpacityMask>
-            <TextBlock Text="CTM (R)" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock x:Name ="CTMRightBatteryLevel" HorizontalAlignment="Center"/>
-        </StackPanel>
-
-        <StackPanel Grid.Column="1" Grid.Row ="1" Grid.RowSpan="3" VerticalAlignment="Center">
-            <TextBlock Text="{Binding Path=ActiveGroupLeft, Mode=OneWay}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding Path=StimRateLeft, Mode=OneWay}" Visibility="{Binding StimDataVisible, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding Path=StimAmpLeft, Mode=OneWay}" Visibility="{Binding StimDataVisible, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="Stim State: " Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Path=StimElectrodeLeft, Mode=OneWay}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding Path=StimStateLeft, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Path=AdaptiveRunningLeft, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Path=BeepLoggedLeft, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <StackPanel Margin="10" VerticalAlignment="Center" Orientation="Horizontal">
-                <TextBlock Text="Stream Time: " HorizontalAlignment="Center" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding StopWatchTimeLeft}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <!--Row 0-->
+                <StackPanel Grid.Column="3" Grid.Row ="0" Grid.ColumnSpan="2" Margin="10" VerticalAlignment="Center" Orientation="Horizontal">
+                <TextBlock Text ="Laptop Battery: " HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding LaptopBatteryLevel}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text ="%" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </StackPanel>
-            
-        </StackPanel>
 
-        <StackPanel Grid.Column="3" Grid.Row ="1" Grid.RowSpan="3" VerticalAlignment="Center" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}">
-            <TextBlock Text="{Binding Path=ActiveGroupRight, Mode=OneWay}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding Path=StimRateRight, Mode=OneWay}" Visibility="{Binding StimDataVisible, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding Path=StimAmpRight, Mode=OneWay}" Visibility="{Binding StimDataVisible, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="Stim State: " Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Path=StimElectrodeRight, Mode=OneWay}" Margin="10" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding Path=StimStateRight, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Path=AdaptiveRunningRight, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Path=BeepLoggedRight, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <StackPanel Margin="10" VerticalAlignment="Center" Orientation="Horizontal">
-                <TextBlock Text="Stream Time: " HorizontalAlignment="Center" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding StopWatchTimeRight}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Button x:Name="ExitButtonClick" Style="{StaticResource textWrapper}" Content="Exit Program" Grid.Column="5" Grid.Row="0" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
+
+            <!--Row 1-->
+            <Border x:Name="border_ctm_left" Grid.Column="0" Grid.Row ="1" Background="{Binding BorderCTMLeftBackground}" CornerRadius="20" Margin="5, 25, 5, 25"/>
+            <StackPanel Grid.Column="0" Grid.Row ="1" Margin="10" VerticalAlignment="Center" Orientation="Vertical">
+                <StackPanel.OpacityMask>
+                    <VisualBrush Visual="{Binding ElementName=border_ctm_left}"/>
+                </StackPanel.OpacityMask>
+                <TextBlock Text="{Binding CTMLeftText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name ="CTMLeftBatteryLevel" HorizontalAlignment="Center"/>
             </StackPanel>
-        </StackPanel>
 
-        <!--Row 2-->
-        <fa:ImageAwesome x:Name="spinner" Panel.ZIndex="1" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="4" Grid.RowSpan="4" Icon="CircleOutlineNotch" Spin="True" Height="150" Width="150" Visibility="{Binding IsSpinnerVisible, Converter={StaticResource Converter}}"/>
-        <Border x:Name="border_ins_left" Grid.Column="0" Grid.Row ="2" Background="{Binding BorderINSLeftBackground}" CornerRadius="20" Margin="5, 25, 5, 25"/>
-        <StackPanel Grid.Column="0" Grid.Row ="2" Margin="10" VerticalAlignment="Center" Orientation="Vertical">
-            <TextBlock Text="{Binding INSLeftText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock x:Name ="INSLeftBatteryLevel" HorizontalAlignment="Center"/>
-        </StackPanel>
+            <Border x:Name="border_ctm_right" Grid.Column="3" Grid.Row ="1" Background="{Binding BorderCTMRightBackground}" CornerRadius="20" Margin="5, 25, 5, 25" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}"/>
+            <StackPanel Grid.Column="3" Grid.Row ="1" Margin="10" VerticalAlignment="Center" Orientation="Vertical" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}">
+                <StackPanel.OpacityMask>
+                    <VisualBrush Visual="{Binding ElementName=border_ctm_right}"/>
+                </StackPanel.OpacityMask>
+                <TextBlock Text="CTM (R)" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name ="CTMRightBatteryLevel" HorizontalAlignment="Center"/>
+            </StackPanel>
 
-        <Border x:Name="border_ins_right" Grid.Column="2" Grid.Row ="2" Background="{Binding BorderINSRightBackground}" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}" CornerRadius="20" Margin="5, 25, 5, 25"/>
-        <StackPanel Grid.Column="2" Grid.Row ="2" Margin="10" VerticalAlignment="Center" Orientation="Vertical" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}">
-            <TextBlock Text="INS (R)" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <TextBlock x:Name ="INSRightBatteryLevel" HorizontalAlignment="Center"/>
-        </StackPanel>
-        
-        <!--Row 3-->
-        <Border x:Name="border_stream_left" Grid.Column="0" Grid.Row ="3" Background="{Binding BorderStreamLeftBackground}" CornerRadius="20" Margin="5, 25, 5, 25">
-            <TextBlock Text="{Binding StreamLeftText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
+            <StackPanel Grid.Column="1" Grid.ColumnSpan="2" Grid.Row ="1" Grid.RowSpan="3" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Path=ActiveGroupLeft, Mode=OneWay}" Visibility="{Binding VisibilityStimGroupLeftUni, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Path=StimRateLeft, Mode=OneWay}" Visibility="{Binding VisibilityStimRateLeftUni, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding Path=StimAmpLeft, Mode=OneWay}" Visibility="{Binding VisibilityStimAmpLeftUni, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="Stim State: " Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=StimElectrodeLeft, Mode=OneWay}" Visibility="{Binding VisibilityStimContactsLeftUni, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Path=StimStateLeft, Mode=OneWay}" Visibility="{Binding VisibilityStimTherapyOnOffLeftUni, Converter={StaticResource Converter}}" Foreground="{Binding Path=StimStateLeftTextColor, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=AdaptiveRunningLeft, Mode=OneWay}" Visibility="{Binding VisibilityStimAdaptiveOnLeftUni, Converter={StaticResource Converter}}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=BeepLoggedLeft, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <StackPanel Margin="10" VerticalAlignment="Center" Orientation="Horizontal">
+                    <TextBlock Text="Stream Time: " HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding StopWatchTimeLeft}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </StackPanel>
 
-        <Border x:Name="border_stream_right" Grid.Column="2" Grid.Row ="3" Background="{Binding BorderStreamRightBackground}" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}" CornerRadius="20" Margin="5, 25, 5, 25">
-            <TextBlock Text="Stream (R)" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
-        
-        <!--Row 4-->
-        <Button x:Name="MoveGroupButtonClick" Content="{Binding MoveGroupButtonText}" Grid.Column="0" Grid.Row="4" BorderBrush="Red" BorderThickness="2" Background="CornflowerBlue" Margin="15, 15, 15, 15" HorizontalContentAlignment="Center" Visibility="{Binding MoveGroupButtonEnabled, Converter={StaticResource Converter}}"/>
-        <Button x:Name="MontageButtonClick" Content="Run Montage" Grid.Column="1" Grid.Row="4" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding MontageButtonEnabled, Converter={StaticResource Converter}}"/>
-        <Button x:Name="StimSweepButtonClick" Content="Stim Titration" Grid.Column="2" Grid.Row="4" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding StimSweepButtonEnabled, Converter={StaticResource Converter}}"/>
-        <Button x:Name="NewSessionButtonClick" Content="New Session" Grid.Column="3" Grid.Row="4" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding NewSessionButtonEnabled, Converter={StaticResource Converter}}"/>
+            </StackPanel>
 
-        <!--Row 5-->
-        <Button x:Name="ConnectButtonClick" Content="{Binding ConnectButtonText}" Background="{Binding ConnectButtonColor}" IsEnabled="{Binding CanConnect}" Grid.Column="0" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
-        <Button x:Name="WebPageOneButtonClick" Content="{Binding WebPageOneButtonText}" Grid.Column="1" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding WebPageOneButtonEnabled, Converter={StaticResource Converter}}"/>
-        <Button x:Name="WebPageTwoButtonClick" Content="{Binding WebPageTwoButtonText}" Grid.Column="2" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding WebPageTwoButtonEnabled, Converter={StaticResource Converter}}"/>
-        <Button x:Name="ReportButtonClick" Content="Report" Grid.Column="3" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding ReportButtonVisible, Converter={StaticResource Converter}}"/>
+            <StackPanel Grid.Column="4" Grid.ColumnSpan="2" Grid.Row ="1" Grid.RowSpan="3" VerticalAlignment="Center" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}">
+                <TextBlock Text="{Binding Path=ActiveGroupRight, Mode=OneWay}" Visibility="{Binding VisibilityStimGroupRight, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Path=StimRateRight, Mode=OneWay}" Visibility="{Binding VisibilityStimRateRight, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Path=StimAmpRight, Mode=OneWay}" Visibility="{Binding VisibilityStimAmpRight, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="Stim State: " Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=StimElectrodeRight, Mode=OneWay}" Visibility="{Binding VisibilityStimContactsRight, Converter={StaticResource Converter}}" Margin="10" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Path=StimStateRight, Mode=OneWay}" Visibility="{Binding VisibilityStimTherapyOnOffRight, Converter={StaticResource Converter}}" Foreground="{Binding Path=StimStateRightTextColor, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=AdaptiveRunningRight, Mode=OneWay}" Visibility="{Binding VisibilityStimAdaptiveOnRight, Converter={StaticResource Converter}}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=BeepLoggedRight, Mode=OneWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <StackPanel Margin="10" VerticalAlignment="Center" Orientation="Horizontal">
+                    <TextBlock Text="Stream Time: " HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding StopWatchTimeRight}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
 
-        <!--On top of other views-->
-        <Grid Width="400" Height="75" Grid.Column="1" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2" Visibility="{Binding ProgressVisibility}">
-            <ProgressBar  Minimum="0" Maximum="100" Value="{Binding CurrentProgress}"/>
-            <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <!--Row 2-->
+            <fa:ImageAwesome x:Name="spinner" Panel.ZIndex="1" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="4" Grid.RowSpan="4" Icon="CircleOutlineNotch" Spin="True" Height="150" Width="150" Visibility="{Binding IsSpinnerVisible, Converter={StaticResource Converter}}"/>
+            <Border x:Name="border_ins_left" Grid.Column="0" Grid.Row ="2" Background="{Binding BorderINSLeftBackground}" CornerRadius="20" Margin="5, 25, 5, 25"/>
+            <StackPanel Grid.Column="0" Grid.Row ="2" Margin="10" VerticalAlignment="Center" Orientation="Vertical">
+                <TextBlock Text="{Binding INSLeftText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name ="INSLeftBatteryLevel" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <Border x:Name="border_ins_right" Grid.Column="3" Grid.Row ="2" Background="{Binding BorderINSRightBackground}" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}" CornerRadius="20" Margin="5, 25, 5, 25"/>
+            <StackPanel Grid.Column="3" Grid.Row ="2" Margin="10" VerticalAlignment="Center" Orientation="Vertical" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}">
+                <TextBlock Text="INS (R)" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name ="INSRightBatteryLevel" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!--Row 3-->
+            <Border x:Name="border_stream_left" Grid.Column="0" Grid.Row ="3" Background="{Binding BorderStreamLeftBackground}" CornerRadius="20" Margin="5, 25, 5, 25">
+                <TextBlock Text="{Binding StreamLeftText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+
+            <Border x:Name="border_stream_right" Grid.Column="3" Grid.Row ="3" Background="{Binding BorderStreamRightBackground}" Visibility="{Binding IsBilateral, Converter={StaticResource Converter}}" CornerRadius="20" Margin="5, 25, 5, 25">
+                <TextBlock Text="Stream (R)" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+
+            <!--Row 4-->
+            <Button x:Name="MoveGroupButtonClick" Content="{Binding MoveGroupButtonText}" Grid.Column="0" Grid.Row="4" BorderBrush="Red" BorderThickness="2" Background="CornflowerBlue" Margin="15, 15, 15, 15" HorizontalContentAlignment="Center" Visibility="{Binding MoveGroupButtonEnabled, Converter={StaticResource Converter}}"/>
+            <Button x:Name="MontageButtonClick" Style="{StaticResource textWrapper}"  Content="Run Montage" Grid.Column="1" Grid.Row="4" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding MontageButtonEnabled, Converter={StaticResource Converter}}"/>
+            <Button x:Name="SwitchButtonClick" Style="{StaticResource textWrapper}" Content="Switch" Grid.Column="2" Grid.Row="4" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding IsSwitchVisible, Converter={StaticResource Converter}}"/>
+
+            <!--Row 5-->
+            <Button x:Name="ConnectButtonClick" Content="{Binding ConnectButtonText}" BorderBrush="Blue" Background="{Binding ConnectButtonColor}" IsEnabled="{Binding ConnectButtonEnabled}" Grid.Column="0" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
+            <Button x:Name="DownloadLogButtonClick" Style="{StaticResource textWrapper}" Content="{Binding DownloadLogButtonText}" Grid.Column="1" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding DownloadLogButtonVisible, Converter={StaticResource Converter}}"/>
+            <Button x:Name="WebPageOneButtonClick" Style="{StaticResource textWrapper}" Content="{Binding WebPageOneButtonText}" Grid.Column="3" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding WebPageOneButtonEnabled, Converter={StaticResource Converter}}"/>
+            <Button x:Name="WebPageTwoButtonClick" Style="{StaticResource textWrapper}" Content="{Binding WebPageTwoButtonText}" Grid.Column="4" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding WebPageTwoButtonEnabled, Converter={StaticResource Converter}}"/>
+            <Button x:Name="ReportButtonClick" Style="{StaticResource textWrapper}" Content="Report" Grid.Column="5" Grid.Row="5" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding ReportButtonVisible, Converter={StaticResource Converter}}"/>
+
+            <!--On top of other views-->
+            <Grid Width="400" Height="75" Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2" Visibility="{Binding ProgressVisibility}">
+                <ProgressBar  Minimum="0" Maximum="100" Value="{Binding CurrentProgress}"/>
+                <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
         </Grid>
-    </Grid>
+        </TabItem>
+        <TabItem Header="Research Tools" Visibility="{Binding TabVisibility}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="20"/>
+                </Grid.RowDefinitions>
+                <Button x:Name="NewSessionButtonClick" Style="{StaticResource textWrapper}"  Content="New Session" Grid.Column="1" Grid.Row="1" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding NewSessionButtonEnabled, Converter={StaticResource Converter}}"/>
+                <Button x:Name="AlignButtonClick" Style="{StaticResource textWrapper}" Content="Align" IsEnabled="{Binding AlignButtonEnabled}" Grid.Column="2" Grid.Row="1" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding IsAlignVisible, Converter={StaticResource Converter}}"/>
+                <Button x:Name="StimSweepButtonClick" Style="{StaticResource textWrapper}"  Content="Stim Titration" Grid.Column="3" Grid.Row="1" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" Visibility="{Binding StimSweepButtonEnabled, Converter={StaticResource Converter}}"/>
+                <Button x:Name="UpdateSenseButtonClick" Style="{StaticResource textWrapper}"  Content="Update Sense" Grid.Column="4" Grid.Row="1" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center" IsEnabled="{Binding UpdateSenseButtonEnabled}"/>
+                <Button x:Name="FFTVisualizerButtonClick" Style="{StaticResource textWrapper}"  Content="Visualize FFT" Grid.Column="5" Grid.Row="1" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
+                <Button x:Name="LeadIntegrityButtonClick" Style="{StaticResource textWrapper}"  Content="Lead Integrity" Grid.Column="6" Grid.Row="1" Margin="15, 20, 15, 20" HorizontalContentAlignment="Center"/>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="1" Grid.Row="2" Grid.ColumnSpan="2" VerticalAlignment="Center" HorizontalAlignment="Left" ToolTipService.ToolTip="Timer starts over when there is a change in amp, rate, group or start of a new session" ToolTipService.Placement="Mouse">
+                    <TextBlock Text="Rollover Timer: "/>
+                    <TextBlock x:Name="ChangeTimerText"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Grid.Row="5" Grid.RowSpan="2" Margin="10" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Left" >
+                    <TextBlock Text="Left/&#x0a;Unilateral" Grid.Column="1" Grid.Row="5"/>
+                    <TextBlock Text="{Binding INSLeftBatteryLevel}" Foreground="{Binding BorderINSLeftBackground}"/>
+                </StackPanel>
+                
+                <Border x:Name="border_therapy_status_left" Grid.Column="2" Grid.Row="4" Grid.RowSpan="4" Margin="0, 10, 0, 10" Background="{Binding TherapyStatusBackgroundLeft}">
+                    <Border.ToolTip>
+                        <ToolTip>
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Text="Amp Limits: "/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding AmpLowerLimitLeft}"/>
+                                    <TextBlock FontWeight="Bold" Text="mA"/>
+                                    <TextBlock FontWeight="Bold" Text="-"/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding AmpUpperLimitLeft}"/>
+                                    <TextBlock FontWeight="Bold" Text="mA"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Text="Rate Limits: "/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding RateLowerLimitLeft}"/>
+                                    <TextBlock FontWeight="Bold" Text="Hz"/>
+                                    <TextBlock FontWeight="Bold" Text="-"/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding RateUpperLimitLeft}"/>
+                                    <TextBlock FontWeight="Bold" Text="Hz"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Text="PW Limits: "/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding PWLowerLimitLeft}"/>
+                                    <TextBlock FontWeight="Bold" Text="µS"/>
+                                    <TextBlock FontWeight="Bold" Text="-"/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding PWUpperLimitLeft}"/>
+                                    <TextBlock FontWeight="Bold" Text="µS"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ToolTip>
+                    </Border.ToolTip>
+                </Border>
+                <StackPanel Grid.Column="2" Grid.Row="4" Grid.RowSpan="4" VerticalAlignment="Center" Orientation="Vertical" Margin="0, 10, 0, 10">
+                    <TextBlock Text="{Binding Path=StimStateLeft, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Path=StimAmpLeft, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Path=StimRateLeft, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Path=StimLeftPWDisplay, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Path=StimElectrodeLeft, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Path=ActiveRechargeLeftStatus, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button x:Name="GroupALeftButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupALeftButtonEnabled}" Grid.Column="3" Grid.Row="5" Margin="20, 0, 20, 20" Content="Group A" HorizontalContentAlignment="Center"/>
+                <Button x:Name="GroupBLeftButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupBLeftButtonEnabled}" Grid.Column="4" Grid.Row="5" Margin="20, 0, 20, 20" Content="Group B" HorizontalContentAlignment="Center"/>
+                <Button x:Name="StimOnLeftButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding StimOnLeftButtonEnabled}" Grid.Column="5" Grid.Row="5" Margin="20, 0, 20, 20" Content="Stim On" HorizontalContentAlignment="Center"/>
+                <ComboBox Grid.Column="6" Grid.Row="5" x:Name="ProgramOptionsLeft" SelectedItem="{Binding Path=SelectedProgramLeft, Mode=TwoWay}" Margin="5, 10, 5, 5"/>
+
+                <Button x:Name="GroupCLeftButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupCLeftButtonEnabled}" Grid.Column="3" Grid.Row="6" Margin="20, 0, 20, 20" Content="Group C" HorizontalContentAlignment="Center"/>
+                <Button x:Name="GroupDLeftButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupDLeftButtonEnabled}" Grid.Column="4" Grid.Row="6" Margin="20, 0, 20, 20" Content="Group D" HorizontalContentAlignment="Center"/>
+                <Button x:Name="StimOffLeftButtonClick" Style="{StaticResource textWrapperRedBorder}" IsEnabled="{Binding StimOffLeftButtonEnabled}" Grid.Column="5" Grid.Row="6" Margin="20, 0, 20, 20" Content="Stim Off" HorizontalContentAlignment="Center"/>
+
+
+                <Separator Grid.Column="1" Grid.Row="8" Grid.ColumnSpan="6"/>
+
+                <StackPanel Grid.Column="1" Grid.Row="10" Grid.RowSpan="2" Margin="10" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Left" >
+                    <TextBlock Text="Right"/>
+                    <TextBlock Text="{Binding INSRightBatteryLevel}" Foreground="{Binding BorderINSRightBackground}"/>
+                </StackPanel>
+
+                <Border x:Name="border_therapy_status_right" Grid.Column="2" Grid.Row="9" Grid.RowSpan="4" Margin="0, 10, 0, 10" Background="{Binding TherapyStatusBackgroundRight}">
+                    <Border.ToolTip>
+                        <ToolTip>
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Text="Amp Limits: "/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding AmpLowerLimitRight}"/>
+                                    <TextBlock FontWeight="Bold" Text="mA"/>
+                                    <TextBlock FontWeight="Bold" Text="-"/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding AmpUpperLimitRight}"/>
+                                    <TextBlock FontWeight="Bold" Text="mA"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Text="Rate Limits: "/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding RateLowerLimitRight}"/>
+                                    <TextBlock FontWeight="Bold" Text="Hz"/>
+                                    <TextBlock FontWeight="Bold" Text="-"/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding RateUpperLimitRight}"/>
+                                    <TextBlock FontWeight="Bold" Text="Hz"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Text="PW Limits: "/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding PWLowerLimitRight}"/>
+                                    <TextBlock FontWeight="Bold" Text="µS"/>
+                                    <TextBlock FontWeight="Bold" Text="-"/>
+                                    <TextBlock FontWeight="Bold" Text="{Binding PWUpperLimitRight}"/>
+                                    <TextBlock FontWeight="Bold" Text="µS"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ToolTip>
+                    </Border.ToolTip>
+                </Border>
+                <StackPanel Grid.Column="2" Grid.Row="9" Grid.RowSpan="4" VerticalAlignment="Center" Orientation="Vertical" Margin="0, 10, 0, 10">
+                    <TextBlock Text="{Binding Path=StimStateRight, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Path=StimAmpRight, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Path=StimRateRight, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Path=StimRightPWDisplay, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Path=StimElectrodeRight, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Path=ActiveRechargeRightStatus, Mode=OneWay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button x:Name="GroupARightButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupARightButtonEnabled}" Grid.Column="3" Grid.Row="10" Margin="20, 0, 20, 20" Content="Group A" HorizontalContentAlignment="Center"/>
+                <Button x:Name="GroupBRightButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupBRightButtonEnabled}" Grid.Column="4" Grid.Row="10" Margin="20, 0, 20, 20" Content="Group B" HorizontalContentAlignment="Center"/>
+                <Button x:Name="StimOnRightButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding StimOnRightButtonEnabled}" Grid.Column="5" Grid.Row="10" Margin="20, 0, 20, 20" Content="Stim On" HorizontalContentAlignment="Center"/>
+                <ComboBox Grid.Column="6" Grid.Row="10" x:Name="ProgramOptionsRight" SelectedItem="{Binding Path=SelectedProgramRight, Mode=TwoWay}" Margin="5, 10, 5, 5"/>
+
+                <Button x:Name="GroupCRightButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupCRightButtonEnabled}" Grid.Column="3" Grid.Row="11" Margin="20, 0, 20, 20" Content="Group C" HorizontalContentAlignment="Center"/>
+                <Button x:Name="GroupDRightButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding GroupDRightButtonEnabled}" Grid.Column="4" Grid.Row="11" Margin="20, 0, 20, 20" Content="Group D" HorizontalContentAlignment="Center"/>
+                <Button x:Name="StimOffRightButtonClick" Style="{StaticResource textWrapperRedBorder}" IsEnabled="{Binding StimOffRightButtonEnabled}" Grid.Column="5" Grid.Row="11" Margin="20, 0, 20, 20" Content="Stim Off" HorizontalContentAlignment="Center"/>
+
+                <Separator Grid.Column="1" Grid.Row="13" Grid.ColumnSpan="6"/>
+
+                <TextBlock Text="Stim Change" Margin="10" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="1" Grid.Row="14" />
+                <TextBlock Grid.Column="2" Grid.Row="15" Text="Device:" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="2" Grid.Row="16" x:Name="DeviceOptions" SelectedItem="{Binding Path=SelectedDevice, Mode=TwoWay}" Margin="5, 10, 5, 5"/>
+                <StackPanel Grid.Column="3" Grid.Row="14" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center" ToolTipService.ToolTip="Input stim amp step value. 0.1mA resolution" ToolTipService.Placement="Mouse">
+                    <TextBlock Text="Step Amp:" VerticalAlignment="Center"/>
+                    <TextBox x:Name="StepAmpValueInputBox" VerticalAlignment="Center" MinWidth="60" Margin="10,0,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4" Grid.Row="14" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center" ToolTipService.ToolTip="Input pulse width step value. 10µS resolution" ToolTipService.Placement="Mouse">
+                    <TextBlock Text="Step PW:" VerticalAlignment="Center"/>
+                    <TextBox x:Name="StepPWValueInputBox" VerticalAlignment="Center" MinWidth="60" Margin="10,0,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="5" Grid.Row="14" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center" ToolTipService.ToolTip="Input stim rate step value. 0.1Hz resolution" ToolTipService.Placement="Mouse">
+                    <TextBlock Text="Step Rate:" VerticalAlignment="Center"/>
+                    <TextBox x:Name="StepRateValueInputBox" VerticalAlignment="Center" MinWidth="60" Margin="10,0,0,0"/>
+                </StackPanel>
+                <CheckBox IsChecked="{Binding SenseFriendlyCheckbox}" Grid.Row="15" Grid.Column="6" VerticalAlignment="Bottom" HorizontalAlignment="Left" FontSize="20" ToolTipService.ToolTip="Check this box if you want the sense friendly option for Rate. Set for Step Rate or Change Rate" ToolTipService.Placement="Mouse">
+                    <TextBlock Text="Sense Friendly" Margin="0,-7,0,0"/>
+                    <CheckBox.LayoutTransform>
+                        <ScaleTransform ScaleX="1.2" ScaleY="1.5" />
+                    </CheckBox.LayoutTransform>
+                </CheckBox>
+
+
+                <StackPanel Grid.Column="3" Grid.Row="15" Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,5,0,0" ToolTipService.ToolTip="Step stim amp to specified step value. 0.1mA resolution" ToolTipService.Placement="Mouse">
+                    <Button x:Name="DecrementStimAmpButton" Style="{StaticResource textWrapper}" Content="-" MinWidth="50" Margin="10, 0, 10, 0" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                    <Button x:Name="IncrementStimAmpButton" Style="{StaticResource textWrapper}" Content="+" MinWidth="50" Margin="10, 0, 10, 0" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4" Grid.Row="15" Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,5,0,0" ToolTipService.ToolTip="Step pulse width to specified step value. 10µS resolution" ToolTipService.Placement="Mouse">
+                    <Button x:Name="DecrementStimPWButton" Style="{StaticResource textWrapper}" Content="-" MinWidth="50" Margin="10, 0, 10, 0" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                    <Button x:Name="IncrementStimPWButton" Style="{StaticResource textWrapper}" Content="+" MinWidth="50" Margin="10, 0, 10, 0" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="5" Grid.Row="15" Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,5,0,0" ToolTipService.ToolTip="Step stim rate to specified step value. 0.1Hz resolution" ToolTipService.Placement="Mouse">
+                    <Button x:Name="DecrementStimRateButton" Style="{StaticResource textWrapper}" Content="-" MinWidth="50" Margin="10, 0, 10, 0" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                    <Button x:Name="IncrementStimRateButton" Style="{StaticResource textWrapper}" Content="+" MinWidth="50" Margin="10, 0, 10, 0" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                </StackPanel>
+
+                <TextBox x:Name="StimChangeAmpValueInput" Grid.Column="3" Grid.Row="16" MinWidth="70" HorizontalContentAlignment="Center" VerticalAlignment="Center" Margin="10,20,10,0" ToolTipService.ToolTip="Sets stim amp to specified value. 0.1mA resolution" ToolTipService.Placement="Mouse"/>
+                <TextBox x:Name="StimChangePWInput" Grid.Column="4" Grid.Row="16" MinWidth="70" HorizontalContentAlignment="Center" VerticalAlignment="Center" Margin="10,20,10,0" ToolTipService.ToolTip="Sets pulse width to specified value. 10µS resolution" ToolTipService.Placement="Mouse"/>
+                <TextBox x:Name="StimChangeRateInput" Grid.Column="5" Grid.Row="16" MinWidth="70" HorizontalContentAlignment="Center" VerticalAlignment="Center" Margin="10,20,10,0" ToolTipService.ToolTip="Sets stim rate to specified value. 0.1Hz resolution" ToolTipService.Placement="Mouse"/>
+
+                <Button x:Name="SetStimAmpValueInputButton" Style="{StaticResource textWrapper}" Content="Change Amp" MinWidth="60" Grid.Column="3" Grid.Row="17" VerticalAlignment="Center" HorizontalContentAlignment="Center" Margin="10, 5, 10, 0" ToolTipService.ToolTip="Sets stim amp to specified value. 0.1mA resolution" ToolTipService.Placement="Mouse" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                <Button x:Name="SetStimPWValueInputButton" Style="{StaticResource textWrapper}" Content="Change PW" MinWidth="60" Grid.Column="4" Grid.Row="17" VerticalAlignment="Center" HorizontalContentAlignment="Center" Margin="10, 5, 10, 0" ToolTipService.ToolTip="Sets pulse width to specified value. 10µS resolution" ToolTipService.Placement="Mouse" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+                <Button x:Name="SetStimRateValueInputButton" Style="{StaticResource textWrapper}" Content="Change Rate" MinWidth="60" Grid.Column="5" Grid.Row="17" VerticalAlignment="Center" HorizontalContentAlignment="Center" Margin="10, 5, 10, 0" ToolTipService.ToolTip="Sets stim rate to specified value. 0.1Hz resolution" ToolTipService.Placement="Mouse" IsEnabled="{Binding StimSettingButtonsEnabled}"/>
+
+                <Grid Width="400" Height="75" Grid.Column="3" Grid.Row="8" Grid.ColumnSpan="2" Grid.RowSpan="2" Visibility="{Binding ProgressVisibility}">
+                    <ProgressBar  Minimum="0" Maximum="100" Value="{Binding CurrentProgress}"/>
+                    <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+            </Grid>
+        </TabItem>
+    </TabControl>
+    
     
 </Window>

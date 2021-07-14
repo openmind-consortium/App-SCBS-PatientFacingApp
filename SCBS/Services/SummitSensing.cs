@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
@@ -41,26 +42,34 @@ namespace SCBS.Services
         public bool SummitConfigureSensing(SummitSystem theSummit, SenseModel localModel, bool showErrorMessage)
         {
             APIReturnInfo bufferReturnInfo;
-            SensingState state;
+
             //This checks to see if sensing is already enabled. This can happen if adaptive is already running and we don't need to configure it. 
             //If it is, then skip setting up sensing
-            try
+            if (CheckIsAdaptiveRunning(theSummit))
             {
-                theSummit.ReadSensingState(out state);
-                if (state.State.ToString().Contains("DetectionLd0") || state.State.ToString().Contains("DetectionLd1"))
+                return true;
+            }
+
+            int counter = 5;
+            while (counter > 0)
+            {
+                if (StopSensing(theSummit, showErrorMessage))
                 {
-                    return true;
+                    break;
+                }
+                else
+                {
+                    _log.Warn("Could not stop sensing before configure sensing. Trying again...");
+                    counter--;
+                    Thread.Sleep(500);
                 }
             }
-            catch (Exception error)
+            if (counter == 0)
             {
-                _log.Error(error);
+                _log.Warn("Could not stop sensing before configure sensing. Returning false");
                 return false;
             }
-            if (!StopSensing(theSummit, showErrorMessage))
-            {
-                return false;
-            }
+
             // Create a sensing configuration
             List<TimeDomainChannel> TimeDomainChannels = new List<TimeDomainChannel>(4);
 
@@ -69,7 +78,7 @@ namespace SCBS.Services
                 GetTDSampleRate(localModel.Sense.TimeDomains[0].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[0].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[0].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[0].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[0].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[0].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[0].Hpf)));
@@ -79,7 +88,7 @@ namespace SCBS.Services
                 GetTDSampleRate(localModel.Sense.TimeDomains[1].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[1].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[1].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[1].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[1].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[1].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[1].Hpf)));
@@ -89,7 +98,7 @@ namespace SCBS.Services
                 GetTDSampleRate(localModel.Sense.TimeDomains[2].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[2].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[2].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[2].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[2].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[2].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[2].Hpf)));
@@ -99,7 +108,7 @@ namespace SCBS.Services
                 GetTDSampleRate(localModel.Sense.TimeDomains[3].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[3].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[3].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[3].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[3].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[3].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[3].Hpf)));
@@ -110,7 +119,7 @@ namespace SCBS.Services
                 localModel.Sense.FFT.FftInterval,
                 ConfigConversions.FftWindowAutoLoadsConvert(localModel.Sense.FFT.WindowLoad),
                 localModel.Sense.FFT.WindowEnabled,
-                FftWeightMultiplies.Shift7,
+                ConfigConversions.FftWeightMultipliesConvert(localModel.Sense.FFT.WeightMultiplies),
                 localModel.Sense.FFT.StreamSizeBins,
                 localModel.Sense.FFT.StreamOffsetBins);
 
@@ -192,12 +201,14 @@ namespace SCBS.Services
             APIReturnInfo bufferReturnInfo;
             try
             {
+                _log.Info("Start Sensing and Streaming");
                 //This checks to see if sensing is already enabled. 
                 //If it is, then skip write sensing state and just start streaming
                 SensingState state;
                 theSummit.ReadSensingState(out state);
                 if (!state.State.ToString().Contains("DetectionLd0") && !state.State.ToString().Contains("DetectionLd1"))
                 {
+                    _log.Info("Detection is off. Turn sensing on with LD0/LD1 off");
                     // Start sensing
                     //LDO is false because if it is in adaptive then it will bypass this. If not in adaptive, don't need it.
                     bufferReturnInfo = theSummit.WriteSensingState(ConfigConversions.TDSenseStatesConvert(
@@ -213,6 +224,10 @@ namespace SCBS.Services
                     {
                         return false;
                     }
+                }
+                else
+                {
+                    _log.Warn("Detection is on. SKIP SENSING AND START STREAMING!");
                 }
                 // Start streaming
                 bufferReturnInfo = theSummit.WriteSensingEnableStreams(
@@ -249,6 +264,7 @@ namespace SCBS.Services
             APIReturnInfo bufferReturnInfo;
             try
             {
+                _log.Info("Start Streaming");
                 // Start streaming
                 bufferReturnInfo = theSummit.WriteSensingEnableStreams(
                     senseConfig.StreamEnables.TimeDomain,
@@ -288,6 +304,7 @@ namespace SCBS.Services
             APIReturnInfo bufferReturnInfo;
             try
             {
+                _log.Info("Stop Streaming");
                 bufferReturnInfo = localSummit.WriteSensingDisableStreams(true, true, true, true, true, true, true, true);
                 if (!CheckForReturnError(bufferReturnInfo, "Turn off Streaming", showErrorMessage))
                 {
@@ -318,6 +335,7 @@ namespace SCBS.Services
             APIReturnInfo bufferReturnInfo;
             try
             {
+                _log.Info("Stop Sensing");
                 bufferReturnInfo = theSummit.WriteSensingState(SenseStates.None, 0x00);
                 if (!CheckForReturnError(bufferReturnInfo, "Turn off Sensing", showErrorMessage))
                 {
@@ -387,6 +405,45 @@ namespace SCBS.Services
                 return false;
             }
             return true;
+        }
+        /// <summary>
+        /// Checks if adaptive is running
+        /// </summary>
+        /// <param name="localSummit">Summit system</param>
+        /// <returns>true if adaptive is running, false if not or errors</returns>
+        private bool CheckIsAdaptiveRunning(SummitSystem localSummit)
+        {
+            SensingState state;
+            int counter = 5;
+            while (counter > 0)
+            {
+                try
+                {
+                    localSummit.ReadSensingState(out state);
+                    if(state == null)
+                    {
+                        counter--;
+                    }
+                    else if (state.State.ToString().Contains("DetectionLd0") || state.State.ToString().Contains("DetectionLd1"))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                catch (Exception error)
+                {
+                    _log.Error(error);
+                }
+            }
+            if (counter == 0)
+            {
+                _log.Warn("Could not stop sensing before configure sensing. Returning false");
+                return false;
+            }
+            return false;
         }
     }
 }

@@ -16,6 +16,14 @@ namespace SCBS.Models
         /// </summary>
         public string BasePathToJSONFiles { get; set; }
         /// <summary>
+        /// Set to true for Researcher Tools visible to user else false if tab collapsed and not visible.
+        /// </summary>
+        public bool TurnOnResearcherTools { get; set; }
+        /// <summary>
+        /// Set to true for Lead Integrity test be ran at initial connection after app startup.
+        /// </summary>
+        public bool RunLeadIntegrityTestOnStartup { get; set; }
+        /// <summary>
         /// Set to true if bilateral or false if unilateral
         /// </summary>
         public bool Bilateral { get; set; }
@@ -45,9 +53,13 @@ namespace SCBS.Models
         /// </summary>
         public bool HideReportButton { get; set; }
         /// <summary>
-        /// Set to true if you want the log and mirror info for adaptive states to be added to current session directory
+        /// Set to true if you want the application log added to current session directory
         /// </summary>
         public bool GetAdaptiveLogInfo { get; set; }
+        /// <summary>
+        /// Set to true if you want the event log to be added to current session directory
+        /// </summary>
+        public bool GetEventLogInfo { get; set; }
         /// <summary>
         /// Gets or sets a value indicating whether [get adaptive mirror information].
         /// </summary>
@@ -78,6 +90,14 @@ namespace SCBS.Models
         /// Adds the option to move to a group based on config file
         /// </summary>
         public MoveGroupButton MoveGroupButton { get; set; }
+        /// <summary>
+        /// Adds the option to download mirror or application and event logs from INS
+        /// </summary>
+        public LogDownloadButton LogDownloadButton { get; set; }
+        /// <summary>
+        /// Adds the option to hide stim settings
+        /// </summary>
+        public StimDisplaySettings StimDisplaySettings { get; set; }
     }
 
     /// <summary>
@@ -174,5 +194,123 @@ namespace SCBS.Models
         /// Group to move to on right side
         /// </summary>
         public string GroupToMoveToRight { get; set; }
+    }
+    /// <summary>
+    /// Button to allow to download mirror, event and application log files and change text
+    /// </summary>
+    public class LogDownloadButton
+    {
+        /// <summary>
+        /// Comment 
+        /// </summary>
+        public string comment { get; set; }
+        /// <summary>
+        /// Button text
+        /// </summary>
+        public string LogDownloadButtonText { get; set; }
+        /// <summary>
+        /// enable button to download log
+        /// </summary>
+        public bool LogDownloadButtonEnabled { get; set; }
+        /// <summary>
+        /// Type of download for log files
+        /// </summary>
+        public LogTypesToDownload LogTypesToDownload { get; set; }
+    }
+    /// <summary>
+    /// Type of download for log files
+    /// </summary>
+    public class LogTypesToDownload
+    {
+        /// <summary>
+        /// application log
+        /// </summary>
+        public bool ApplicationLog { get; set; }
+        /// <summary>
+        /// event log
+        /// </summary>
+        public bool EventLog { get; set; }
+        /// <summary>
+        /// mirror log
+        /// </summary>
+        public bool MirrorLog { get; set; }
+    }
+    /// <summary>
+    /// Option to hide the stim settings
+    /// </summary>
+    public class StimDisplaySettings
+    {
+        /// <summary>
+        /// Comment 
+        /// </summary>
+        public string comment { get; set; }
+        /// <summary>
+        /// Adds the option to hide stim settings for left
+        /// </summary>
+        public LeftUnilateralSettings LeftUnilateralSettings { get; set; }
+        /// <summary>
+        /// Adds the option to hide stim settings for right
+        /// </summary>
+        public RightSettings RightSettings { get; set; }
+    }
+    /// <summary>
+    /// Option to hide the stim settings for left/unilateral
+    /// </summary>
+    public class LeftUnilateralSettings
+    {
+        /// <summary>
+        /// HideGroup
+        /// </summary>
+        public bool HideGroup { get; set; }
+        /// <summary>
+        /// HideAmp
+        /// </summary>
+        public bool HideAmp { get; set; }
+        /// <summary>
+        /// HideRate
+        /// </summary>
+        public bool HideRate { get; set; }
+        /// <summary>
+        /// HideStimContacts
+        /// </summary>
+        public bool HideStimContacts { get; set; }
+        /// <summary>
+        /// HideTherapyOnOff
+        /// </summary>
+        public bool HideTherapyOnOff { get; set; }
+        /// <summary>
+        /// HideAdaptiveOn
+        /// </summary>
+        public bool HideAdaptiveOn { get; set; }
+    }
+    /// <summary>
+    /// Option to hide the stim settings for RightSettings
+    /// </summary>
+    public class RightSettings
+    {
+        /// <summary>
+        /// HideGroup
+        /// </summary>
+        public bool HideGroup { get; set; }
+        /// <summary>
+        /// HideAmp
+        /// </summary>
+        public bool HideAmp { get; set; }
+        /// <summary>
+        /// HideRate
+        /// </summary>
+        public bool HideRate { get; set; }
+        /// <summary>
+        /// HideStimContacts
+        /// </summary>
+        public bool HideStimContacts { get; set; }
+        /// <summary>
+        /// HideTherapyOnOff
+        /// </summary>
+        public bool HideTherapyOnOff { get; set; }
+        /// <summary>
+        /// HideAdaptiveOn
+        /// </summary>
+        public bool HideAdaptiveOn { get; set; }
     }
 }

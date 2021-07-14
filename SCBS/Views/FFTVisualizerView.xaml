@@ -1,0 +1,140 @@
+﻿<Window x:Class="SCBS.Views.FFTVisualizerView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:s="http://schemas.abtsoftware.co.uk/scichart"
+        xmlns:local="clr-namespace:SCBS.Views"
+        mc:Ignorable="d"
+        Title="FFTVisualizerView" Height="800" Width="1000">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Column="0" Grid.Row="0">
+            <ComboBox Margin="2" Height="30" x:Name="FFTScaleOptions" SelectedItem="{Binding Path=SelectedFFTScaleOption, Mode=TwoWay}"   ToolTipService.ToolTip="This option allows you to visualize the data auto-scaled or None which allows you to adjust the data view with the mouse" ToolTipService.Placement="Mouse"/>
+            <ComboBox Margin="2" Height="30" x:Name="FFTLog10Options" SelectedItem="{Binding Path=SelectedFFTLog10Option, Mode=TwoWay}"   ToolTipService.ToolTip="This option takes the log10 of the data points before charting them. You may choose None to see actual data. Set Auto-scale to None and select part of the chart with the mouse to view the data." ToolTipService.Placement="Mouse"/>
+            <TextBlock Text="Mean:" Margin="2" ToolTipService.ToolTip="This takes the mean of each set of FFT data coming in. Set to 1 to see real time data coming in" ToolTipService.Placement="Mouse"/>
+            <TextBox x:Name="FFTMean" Margin="2" ToolTipService.ToolTip="This is the mean of each set of FFT data coming in. Set to 1 to see real time data coming in" ToolTipService.Placement="Mouse"/>
+            <Button Content="Set" Margin="2" x:Name="FFTMeanButton" ToolTipService.ToolTip="This sets the mean of each set of FFT data coming in. Set to 1 to see real time data coming in" ToolTipService.Placement="Mouse"/>
+            <!--<TextBlock Text="Overlap:" Margin="2"/>
+            <TextBlock x:Name ="FFTOverlapDisplay" Margin="2" HorizontalAlignment="Center"/>
+            <TextBlock Text="Time:" Margin="2"/>
+            <TextBlock x:Name ="FFTTimeDisplay" Margin="2" HorizontalAlignment="Center"/>-->
+
+            <Label Content="Left/Unilateral:" Height="28" HorizontalAlignment="Left" Margin="0,0,0,0" Name="label1" VerticalAlignment="Top" />
+            <RadioButton Name="FFTChannelZeroLeft" GroupName="FFTChannelLeft" Content="{Binding FFTChannelZeroTextLeft}" Margin="5,0,0,0"/>
+            <RadioButton Name="FFTChannelOneLeft" GroupName="FFTChannelLeft" Content="{Binding FFTChannelOneTextLeft}" Margin="5,5,0,0"/>
+            <RadioButton Name="FFTChannelTwoLeft" GroupName="FFTChannelLeft" Content="{Binding FFTChannelTwoTextLeft}" Margin="5,5,0,0"/>
+            <RadioButton Name="FFTChannelThreeLeft" GroupName="FFTChannelLeft" Content="{Binding FFTChannelThreeTextLeft}" Margin="5,5,0,0"/>
+            <Label Content="Right:" Height="28" HorizontalAlignment="Left" Margin="0,0,0,0" Name="label2" VerticalAlignment="Top" />
+            <RadioButton Name="FFTChannelZeroRight" GroupName="FFTChannelRight" Content="{Binding FFTChannelZeroTextRight}" Margin="5,0,0,0"/>
+            <RadioButton Name="FFTChannelOneRight" GroupName="FFTChannelRight" Content="{Binding FFTChannelOneTextRight}" Margin="5,5,0,0"/>
+            <RadioButton Name="FFTChannelTwoRight" GroupName="FFTChannelRight" Content="{Binding FFTChannelTwoTextRight}" Margin="5,5,0,0"/>
+            <RadioButton Name="FFTChannelThreeRight" GroupName="FFTChannelRight" Content="{Binding FFTChannelThreeTextRight}" Margin="5,5,0,0"/>
+        </StackPanel>
+
+        <s:SciChartSurface x:Name="FFTChart"
+                                       ChartTitle="FFT"
+                                       Grid.Row="0"
+                                       Grid.Column="1"
+                                       Grid.ColumnSpan="2" 
+                                       Grid.RowSpan="2"
+                                       YAxes="{s:AxesBinding YAxesFFT}">
+
+            <s:SciChartSurface.RenderableSeries>
+                <s:FastLineRenderableSeries DataSeries="{Binding FFTChartLeftUnilateral}" YAxisId="FFTID" Stroke="LightBlue" />
+                <s:FastLineRenderableSeries DataSeries="{Binding FFTChartRight}" YAxisId="FFTID" Stroke="OrangeRed" />
+            </s:SciChartSurface.RenderableSeries>
+
+            <s:SciChartSurface.YAxis>
+                <s:NumericAxis AxisTitle="FFT Values" FontSize="20">
+                    <s:NumericAxis.Scrollbar>
+                        <s:SciChartScrollbar Height="16"/>
+                    </s:NumericAxis.Scrollbar>
+                </s:NumericAxis>
+            </s:SciChartSurface.YAxis>
+
+            <s:SciChartSurface.XAxis>
+                <s:NumericAxis AxisTitle="FFT Bins" AutoRange="Always" FontSize="20">
+                    <s:NumericAxis.Scrollbar>
+                        <s:SciChartScrollbar Height="16"/>
+                    </s:NumericAxis.Scrollbar>
+                </s:NumericAxis>
+            </s:SciChartSurface.XAxis>
+
+            <s:SciChartSurface.ChartModifier>
+                <s:ModifierGroup>
+
+                    <s:RolloverModifier x:Name="rolloverModifier" ShowAxisLabels="False" UseInterpolation="True" ShowTooltipOn="MouseRightButtonDown" />
+                    <s:LegendModifier ShowLegend="True" Orientation="Vertical" VerticalAlignment="Top" HorizontalAlignment="Right"/>
+                    <s:RubberBandXyZoomModifier IsXAxisOnly="true"/>
+                    <s:ZoomPanModifier ExecuteOn="MouseRightButton" />
+                    <s:ZoomExtentsModifier ExecuteOn="MouseDoubleClick" />
+                    <s:YAxisDragModifier/>
+                    <s:XAxisDragModifier/>
+                    <s:RubberBandXyZoomModifier IsEnabled="true" />
+                    <s:ZoomPanModifier IsEnabled="true" ClipModeX="None" />
+                    <s:ZoomExtentsModifier/>
+                </s:ModifierGroup>
+            </s:SciChartSurface.ChartModifier>
+
+            <s:SciChartSurface.Annotations>
+                <s:CustomAnnotation Content="{Binding Source={x:Reference Name=rolloverModifier}, Path=SeriesData}"
+                                    CoordinateMode="Relative"
+                                    HorizontalAnchorPoint="Left"
+                                    Opacity="1"
+                                    VerticalAnchorPoint="Top"
+                                    X1="0.01"
+                                    Y1="0.02">
+                    <s:CustomAnnotation.ContentTemplate>
+                        <DataTemplate>
+                            <!--  Define a panel to display rollover results  -->
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Background="Black" BorderBrush="#77FFFFFF" BorderThickness="2" Padding="5">
+                                <ItemsControl DataContext="{Binding}" ItemsSource="{Binding SeriesInfo}">
+                                    <ItemsControl.ItemTemplate>
+                                        <!--  Template will be instantiated for each SeriesInfo in the RolloverModifier.SeriesInfo collection  -->
+                                        <!--  See the SciChart API Documentation for SeriesInfo types, there is a different type for OHLC and XyzDataSeries for instance  -->
+                                        <!--  SeriesInfo is the datacontext for the below. Note you can access the original RenderableSeries via SeriesInfo.RenderableSeries  -->
+                                        <DataTemplate>
+                                            <Grid HorizontalAlignment="Left">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition />
+                                                    <ColumnDefinition />
+                                                    <ColumnDefinition />
+                                                    <ColumnDefinition />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Ellipse Width="9" Height="9" Margin="3"/>
+
+                                                <TextBlock Grid.Column="1" Foreground="White" Width="90" Text="{Binding SeriesName}" />
+
+                                                <!--  When binding to XValue, YValue of type IComparable, StringFormat is mandatory due to a  -->
+                                                <!--  XAML bug that cannot convert IComparable to text, even though underlying type is double  -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                                    <TextBlock  Text="X: " Foreground="White"/>
+                                                    <TextBlock Foreground="White" Text="{Binding XValue, StringFormat=\{0:0.00\}}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                                    <TextBlock Text=" Y: " Foreground="White"/>
+                                                    <TextBlock Foreground="White" Text="{Binding YValue, StringFormat=\{0:0.00\}}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </DataTemplate>
+                    </s:CustomAnnotation.ContentTemplate>
+                </s:CustomAnnotation>
+            </s:SciChartSurface.Annotations>
+        </s:SciChartSurface>
+    </Grid>
+</Window>

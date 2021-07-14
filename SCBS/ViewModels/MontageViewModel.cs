@@ -211,7 +211,7 @@ namespace SCBS.ViewModels
             if (stimInfoLeft.GetTherapyStatus(ref theSummitLeft).Equals("TherapyActive"))
             {
                 StimParameterModel localStimModel = new StimParameterModel("", "", "", "", null);
-                localStimModel = stimInfoLeft.GetStimParamsBasedOnGroup(theSummitLeft, stimInfoLeft.GetActiveGroup(ref theSummitLeft));
+                localStimModel = stimInfoLeft.GetStimParamsBasedOnGroup(theSummitLeft, stimInfoLeft.GetActiveGroup(ref theSummitLeft), 0);
                 for (int i = 0; i < 4; i++)
                 {
                     if (!localStimModel.TherapyElectrodes[i].IsOff)
@@ -247,11 +247,15 @@ namespace SCBS.ViewModels
                     localSenseModel.Sense.TimeDomains[3].Lpf1 = 100;
                     localSenseModel.Sense.TimeDomains[3].Lpf2 = 100;
                 }
-                //stop sensing. Try for 5 times before error out
+                if (_stopBothThreads)
+                {
+                    return;
+                }
+                //stop/configure sensing. Try for 5 times before error out
                 counter = 5;
                 while (counter > 0)
                 {
-                    if (summitSensing.StopSensing(theSummitLeft, false))
+                    if (summitSensing.SummitConfigureSensing(theSummitLeft, localSenseModel, false))
                     {
                         break;
                     }
@@ -266,15 +270,6 @@ namespace SCBS.ViewModels
                     }
                 }
                 if (counter == 0)
-                {
-                    MessageBox.Show("Could not stop sensing.  Please try montage again", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _stopBothThreads = true;
-                }
-                if (_stopBothThreads)
-                {
-                    return;
-                }
-                if(!summitSensing.SummitConfigureSensing(theSummitLeft, localSenseModel, false))
                 {
                     MessageBox.Show("Could not configure sensing.  Please try montage again", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     _stopBothThreads = true;
@@ -396,7 +391,6 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         MessageBox.Show("Could not log stop event.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
                     }
                     ProgressText = "Success";
                     MessageBox.Show("Montage Successful. Report Screen will open after clicking OK.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -476,7 +470,7 @@ namespace SCBS.ViewModels
             if (stimInfoRight.GetTherapyStatus(ref theSummitRight).Equals("TherapyActive"))
             {
                 StimParameterModel localStimModel = new StimParameterModel("", "", "", "", null);
-                localStimModel = stimInfoRight.GetStimParamsBasedOnGroup(theSummitRight, stimInfoRight.GetActiveGroup(ref theSummitRight));
+                localStimModel = stimInfoRight.GetStimParamsBasedOnGroup(theSummitRight, stimInfoRight.GetActiveGroup(ref theSummitRight), 0);
                 for (int i = 0; i < 4; i++)
                 {
                     if (!localStimModel.TherapyElectrodes[i].IsOff)
@@ -510,11 +504,15 @@ namespace SCBS.ViewModels
                     localSenseModel.Sense.TimeDomains[3].Lpf1 = 100;
                     localSenseModel.Sense.TimeDomains[3].Lpf2 = 100;
                 }
-                //stop sensing. Try for 5 times before error out
+                if (_stopBothThreads)
+                {
+                    return;
+                }
+                //stop/configure sensing. Try for 5 times before error out
                 counter = 5;
                 while (counter > 0)
                 {
-                    if (summitSensing.StopSensing(theSummitRight, false))
+                    if (summitSensing.SummitConfigureSensing(theSummitRight, localSenseModel, false))
                     {
                         break;
                     }
@@ -529,15 +527,6 @@ namespace SCBS.ViewModels
                     }
                 }
                 if (counter == 0)
-                {
-                    MessageBox.Show("Could not stop sensing.  Please try montage again", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _stopBothThreads = true;
-                }
-                if (_stopBothThreads)
-                {
-                    return;
-                }
-                if (!summitSensing.SummitConfigureSensing(theSummitRight, localSenseModel, false))
                 {
                     MessageBox.Show("Could not configure sensing.  Please try montage again", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     _stopBothThreads = true;

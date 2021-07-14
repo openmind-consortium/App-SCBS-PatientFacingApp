@@ -1,0 +1,589 @@
+6/3/2021 VERSION 2.1.0.2
+Change Lead Integrity message wording
+
+6/3/2021 VERSION 2.1.0.1
+Bug fix: Does not show sciChart license warning every time on startup
+
+6/3/2021 VERSION 2.1.0.0
+NEW FUNCTIONALITY: 
+RESEARCHER TOOLS WINDOW: WARNING: USE ONLY BY RESEARCHERS! NOT TO BE USED BY PATIENTS! REMEMBER TO SET TO FALSE WHEN FINISHED! You will need to set the new field "TurnOnResearcherTools" to true in application config. This allows a new tab called Researcher Tools to appear at the top of the screen. This is now home to the New Session, Stim Titration and Align buttons.  There is also now Lead Integrity Test, Update Sense and FFT Viewer buttons located in Researcher Tools Tab. You have the ability to adjust stimulation and control the size of the window.
+STIM CONTROL: This allows you to change the groups, stim therapy and amp/rate/pulse width in each group and in each program.  You may choose to change either the left device, right device or Both from the dropdown menu. Both will change the left one first and right one right after automatically. Tooltips are there if you hover the mouse over each field to help. If you hover over the display then it will show lower and upper limits for each device. There is a rollover timer that will reset when you change the rate, amp, group or click new session.
+UPDATE SENSE: This will load the senseLeft config and SenseRight config (if Bilateral) and start streaming with the new sense settings.
+FFT VIEWER: This allows you to view the fft for left and/or right(if bilateral). You will need a SciChart license to use this functionality.  You can use the sciChart license from C:\\AdaptiveDBS\sciChartLicense.txt and copy that over to C:\\SCBS\sciChartLicense.txt and that will work. The same license will also be emailed to you as well.  If you did not receive that email, please contact the software engineer.
+LEAD INTEGRITY TEST: There is a button for researchers to run the lead integrity test in Researcher Tools tab whenever they would like. There is also the abililty for patients to run at startup by setting the application config field "RunLeadIntegrityTestOnStartup" to true.  This popup will only run once at the first connection after application startup. If user does not click "Yes" within 10 seconds or clicks "No" then popup will dissapear and lead integrity will not run. The popup will not appear again until the application is restarted and a connection is made.
+
+BUG FIX:
+PLEASE FIX MANUALLY! If the screen is getting cut off or some of the buttons are cut off on the bottom, please use this fix:
+	Right click the desktop and choose Display Settings (you may also click Start button, Settings, and choose Display from the left-hand column).  Under Scale and layout, you will see "Change the size of text, apps ...".  Choose 100% as the settings.  This will fix the issue.
+
+Stim amp display is now real time, so if it's adjusting in real time in adaptive mode then it will update to the display. 
+
+APPLICATION CONFIG:
+{
+	"comment": "true if it is bilateral or false if it is unilateral. Switch is true if you want the switch tab functionality or false if you do not. Set align to true if you want the align button visible, you must have bilateral set true for this to work",
+	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
+	"TurnOnResearcherTools": true,										//THIS OBJECT HAS BEEN ADDED
+	"RunLeadIntegrityTestOnStartup": true,								//THIS OBJECT HAS BEEN ADDED
+	"Bilateral": true,
+	"Switch": true,
+	"Align": true,
+	"Montage": true,
+	"StimSweep": true,
+	"NewSession": true,
+	"HideReportButton": false,
+	"GetAdaptiveLogInfo": false,
+	"GetEventLogInfo": false,
+	"GetAdaptiveMirrorInfo": false,
+	"LogBeepEvent": false,
+	"CTMBeepEnables": {
+		"comment": "lets you choose what CTM Beeps you want enabled",
+		"None": true,	
+		"GeneralAlert": false,
+		"TelMCompleted": false,
+		"DeviceDiscovered": false,
+		"NoDeviceDiscovered": false,
+		"TelMLost": false
+	},
+	"WebPageButtons": {
+		"comment": "URL for webpage to open and if you want the button enabled and button text",
+		"OpenWithoutBeingConnected": true,
+		"WebPageOneButtonEnabled": true,
+		"WebPageOneURL": "https://www.google.com",
+		"WebPageOneButtonText": "Adaptive Patient Report",
+		"WebPageTwoButtonEnabled": true,
+		"WebPageTwoURL": "https://www.google.com",
+		"WebPageTwoButtonText": "Motor Diary"
+	},
+	"MoveGroupButton": {
+		"comment": "Allows you to move a specified group. GroupToMoveTo must be in format 'A', 'B', etc.  If a single INS, then use GroupToMoveToLeftUnilateral regardless of left or right",
+		"MoveGroupButtonText": "Move Group",
+		"MoveGroupButtonEnabled": true,
+		"GroupToMoveToLeftUnilateral": "B",
+		"GroupToMoveToRight": "B"
+	},
+	"LogDownloadButton": {
+		"comment": "Allows you to enable button that downloads mirror and application and event log data from INS.",
+		"LogDownloadButtonText": "Download Log",
+		"LogDownloadButtonEnabled": true,
+		"LogTypesToDownload":{
+			"ApplicationLog": true,
+			"EventLog": true,
+			"MirrorLog": true
+		}
+	},
+	"StimDisplaySettings":{
+		"comment": "Allows you to hide the stim settings display from user.",
+		"LeftUnilateralSettings":{
+			"HideGroup": false,
+			"HideAmp": true,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		},
+		"RightSettings":{
+			"HideGroup": false,
+			"HideAmp": true,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		}
+	}
+}
+
+5/27/2021 VERSION 2.0.4.1
+Bug Fix: Message box to user during ctm connection failure now only shows once instead of popping up multiple times
+
+4/7/2021 VERSION 2.0.4.0
+
+-UPDATED Stim sweep config, switch config, sense left/right config files! Please update as soon as possible!
+-Stim sweep uses milliseconds instead of seconds for each run. Stim Sweep config needs updating to run. The minimum time step is 100ms, so each time to run must be rounded to the nearest 100ms. IE: for 1050ms you must choose 1000ms or 1100ms for the run.  
+-Switch config files now allow all programs and rates for each state.  Old config file will work with new version, but you will need to update all the config files in switch to allow new functionality. WeightVector can now accept negative and decimal values.
+-Sense files now include FFT Weight Mulitplies (shift 0-7) and each time domain channel allows you to set the evoked response to either standard, evoked 0 or evoked 1. Old config files will work but the default values will be set to FFT shift 7 and td evoked response standard for each td channel.
+-Sense setter that is included with update (see SenseSetter.zip) includes the new FFT Weight Mulitplies feature.  
+
+Config File Changes (see the included config files for actual format):
+
+STIM SWEEP CONFIG:
+{
+	"comment": "Each index is one run. So the first index of each matrix contains the parameters for the first run and the second is the second run and so on. AmpInMa - is the amplitude in milliamps DBS will go to,  RateInHz is the frequency in Hz stimulate will be delivered at, PulseWidthInMicroSeconds is the pulse width for stimulation, TimeToRunInMilliSeconds is the time to run each stimulation run in milliseconds (the lowest is 100ms)- PLEASE ROUND TIMES TO THE NEAREST 100ms!, and EventMarkerDelayTimeInMilliSeconds is the duration after stimulation command has given that even marker is written. This is done to account for stimulation ramp up time that is set by RLP and to allow for easy data analysis. CurrentIndex is the index to run next",
+	"LeftINSOrUnilateral": {
+		"GroupToRunStimSweep": "C",
+		"RateInHz":					[130, 5, 130, 5, 130],
+		"Program":					[0,	0, 0, 0, 0],
+		"AmpInmA": 					[2,	0, 2, 0, 2],
+		"PulseWidthInMicroSeconds": [60, 60, 60, 60, 60]
+	},
+	"RightINS": {
+		"GroupToRunStimSweep": "B",
+		"RateInHz":					[5, 5, 5, 5, 5],
+		"Program":					[0, 0, 0, 0, 0],
+		"AmpInmA": 					[2,	0, 2, 0, 2],
+		"PulseWidthInMicroSeconds": [60, 60, 60, 60, 60]
+	},
+	"TimeToRunInMilliSeconds": 			[10000, 30000, 10000, 100, 30000], 	//THIS IS NOW (ms) AND KEY HAS CHANGED
+	"EventMarkerDelayTimeInMilliSeconds": 500,								//THIS IS NOW (ms) AND KEY HAS CHANGED
+	"CurrentIndex": 0
+}
+
+SWITCH CONFIG:
+{
+	"Comment": "config file for the adaptive DBS configurations",
+	"Detection": {
+		"LD0": {
+			"Comment": "Detection settings for LD0",
+			"B0": 30,
+			"B1": 31,
+			"UpdateRate": 15,
+			"OnsetDuration": 0,
+			"TerminationDuration": 2,
+			"HoldOffOnStartupTime": 0,
+			"StateChangeBlankingUponStateChange": 5,
+			"FractionalFixedPointValue": 4,
+			"DualThreshold": false,
+			"BlankBothLD": false,
+			"Inputs": {
+				"Ch0Band0": true,
+				"Ch0Band1": false,
+				"Ch1Band0": false,
+				"Ch1Band1": false,
+				"Ch2Band0": false,
+				"Ch2Band1": false,
+				"Ch3Band0": false,
+				"Ch3Band1": false
+			},
+			"WeightVector": [
+				1.0,
+				0,
+				0,
+				0.0
+			],
+			"NormalizationMultiplyVector": [
+				1.0,
+				0,
+				0.0,
+				0.0
+			],
+			"NormalizationSubtractVector": [
+				0,
+				0,
+				0,
+				0
+			]
+		},
+		"LD1": {
+			"Comment": "Detection settings for LD1",
+			"IsEnabled": false,
+			"B0": 0,
+			"B1": 2000,
+			"UpdateRate": 1,
+			"OnsetDuration": 0,
+			"TerminationDuration": 0,
+			"HoldOffOnStartupTime": 0,
+			"StateChangeBlankingUponStateChange": 0,
+			"FractionalFixedPointValue": 0,
+			"DualThreshold": false,
+			"BlankBothLD": false,
+			"Inputs": {
+				"Ch0Band0": true,
+				"Ch0Band1": false,
+				"Ch1Band0": false,
+				"Ch1Band1": false,
+				"Ch2Band0": false,
+				"Ch2Band1": false,
+				"Ch3Band0": false,
+				"Ch3Band1": false
+			},
+			"WeightVector": [
+				1.0,
+				0,
+				0.0,
+				0.0
+			],
+			"NormalizationMultiplyVector": [
+				1.0,
+				0,
+				0.0,
+				0.0
+			],
+			"NormalizationSubtractVector": [
+				0,
+				0,
+				0,
+				0
+			]
+		}
+	},
+	"Adaptive": {
+		"Program0": { 										//THIS OBJECT HAS BEEN UPDATED DELETE RATE FIELD
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 100000,
+			"FallTimes": 100000,
+			"State0AmpInMilliamps": 0.0,
+			"State1AmpInMilliamps": 1.0,
+			"State2AmpInMilliamps": 2.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Program1": {										//THIS OBJECT HAS BEEN ADDED
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 0,
+			"FallTimes": 0,
+			"State0AmpInMilliamps": 25.5,
+			"State1AmpInMilliamps": 25.5,
+			"State2AmpInMilliamps": 25.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Program2": {										//THIS OBJECT HAS BEEN ADDED
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 0,
+			"FallTimes": 0,
+			"State0AmpInMilliamps": 25.5,
+			"State1AmpInMilliamps": 25.5,
+			"State2AmpInMilliamps": 25.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Program3": {										//THIS OBJECT HAS BEEN ADDED
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 0,
+			"FallTimes": 0,
+			"State0AmpInMilliamps": 25.5,
+			"State1AmpInMilliamps": 25.5,
+			"State2AmpInMilliamps": 25.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Rates": {											//THIS OBJECT HAS BEEN ADDED
+			"Comment": "Rates can change for each state across all programs",
+			"State0": {
+				"RateTargetInHz": 128,
+				"SenseFriendly": true
+			},
+			"State1": {
+				"RateTargetInHz": 132,
+				"SenseFriendly": true
+			},
+			"State2": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State3": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State4": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State5": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State6": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State7": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State8": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			}
+		}
+	}
+}
+
+SENSE CONFIG:
+{
+	"eventType": {
+		"comment": "event name to use to log to .json files",
+		"type": "Home streaming"
+	},
+	"Mode": 4,
+	"Ratio": 4,
+	"SenseOptions": {
+		"comment": "lets you set what to sense",
+		"TimeDomain": true,
+		"FFT": true,
+		"Power": true,
+		"LD0": true,
+		"LD1": false,
+		"AdaptiveState": true,
+		"LoopRecording": false,
+		"Unused": false
+	},
+	"StreamEnables": {
+		"comment": "lets you set what to stream",
+		"TimeDomain": true,
+		"FFT": false,
+		"Power": true,
+		"Accelerometry": false,
+		"AdaptiveTherapy": true,
+		"AdaptiveState": true,
+		"EventMarker": true,
+		"TimeStamp": true
+	},
+	"Sense": {
+		"commentTDChannelDefinitions": "No more than two channels can be on a single bore. When configuring, channels on first bore will always be first. Can only have sampling rates of: 250, 500, and 1000 (Hz) or disable it by setting IsDisabled to true",
+		"commentFilters": "Stage one low pass(Lpf1) can only be: 450, 100, or 50 (Hz). Stage two low pass(Lpf2) can only be: 1700, 350, 160, or 100 (Hz). High pass(Hpf) can only be: 0.85, 1.2, 3.3, or 8.6 (Hz), Inputs[ anode(positive), cathode(negative) ], tdEvokedResponseEnable can either be 0 for standard, 16 for evoked 0 or 32 for evoked 1",
+		"TDSampleRate": 500,
+		"TimeDomains": [
+			{
+				"IsEnabled": true,
+				"Hpf": 0.85,
+				"Lpf1": 100,
+				"Lpf2": 100,
+				"Inputs": [
+					0,
+					2
+				],
+				"TdEvokedResponseEnable": 0					//THIS FIELD HAS BEEN ADDED
+			},
+			{
+				"IsEnabled": true,
+				"Hpf": 0.85,
+				"Lpf1": 100,
+				"Lpf2": 100,
+				"Inputs": [
+					0,
+					2
+				],
+				"TdEvokedResponseEnable": 0					//THIS FIELD HAS BEEN ADDED
+			},
+			{
+				"IsEnabled": false,
+				"Hpf": 0.85,
+				"Lpf1": 450,
+				"Lpf2": 1700,
+				"Inputs": [
+					8,
+					9
+				],
+				"TdEvokedResponseEnable": 0					//THIS FIELD HAS BEEN ADDED
+			},
+			{
+				"IsEnabled": false,
+				"Hpf": 0.85,
+				"Lpf1": 450,
+				"Lpf2": 1700,
+				"Inputs": [
+					10,
+					11
+				],
+				"TdEvokedResponseEnable": 0					//THIS FIELD HAS BEEN ADDED
+			}
+		],
+		"FFT": {
+			"commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and time domain must be enabled for that channel, WeightMultiplies can be shift: 0-7",
+			"Channel": 0,
+			"FftSize": 256,
+			"FftInterval": 100,
+			"WindowLoad": 100,
+			"StreamSizeBins": 0,
+			"StreamOffsetBins": 0,
+			"WindowEnabled": true,
+			"WeightMultiplies": 7							//THIS FIELD HAS BEEN ADDED
+		},
+		"commentPower": "each power band can be set from 0-250hz, 2 pos bands per channel. Ex: ChNPowerBandN:[lower, upper]",
+		"PowerBands": [
+			{
+				"comment": "Channel: 0 PowerBand: 0",
+				"ChannelPowerBand": [
+					16.6,
+					22.46
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 0 PowerBand: 1",
+				"ChannelPowerBand": [
+					118.16,
+					122.07
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 1 PowerBand: 0",
+				"ChannelPowerBand": [
+					131.84,
+					133.79
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 1 PowerBand: 1",
+				"ChannelPowerBand": [
+					127.93,
+					129.88
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 2 PowerBand: 0",
+				"ChannelPowerBand": [
+					8.79,
+					12.7
+				],
+				"IsEnabled": false
+			},
+			{
+				"comment": "Channel: 2 PowerBand: 1",
+				"ChannelPowerBand": [
+					16.6,
+					22.46
+				],
+				"IsEnabled": false
+			},
+			{
+				"comment": "Channel: 3 PowerBand: 0",
+				"ChannelPowerBand": [
+					8.79,
+					12.7
+				],
+				"IsEnabled": false
+			},
+			{
+				"comment": "Channel: 3 PowerBand: 1",
+				"ChannelPowerBand": [
+					16.6,
+					22.46
+				],
+				"IsEnabled": false
+			}
+		],
+		"Accelerometer": {
+			"commentAcc": "Can be 4,8,16,32,64Hz or set SampleRateDisabled to true for disabled",
+			"SampleRateDisabled": false,
+			"SampleRate": 64
+		},
+		"Misc": {
+			"commentMiscParameters": "stream rate can be 30-100 by tens and is in ms; LoopRecordingTriggersState can be 0-8 or can be disabled by changing IsEnabled to false; Bridging can be 0 = None, 1 = Bridge 0-2 enabled, 2 = Bridge 1-3 enabled",
+			"StreamingRate": 100,
+			"LoopRecordingTriggersState": 0,
+			"LoopRecordingTriggersIsEnabled": true,
+			"LoopRecordingPostBufferTime": 53,
+			"Bridging": 0
+		}
+	}
+}
+
+_________________________________________________________________________
+1/25/2021 VERSION 2.0.3.2
+
+-Message displayed to user providing steps to take if ctm is having connection issues. Previous behavior was to continue with reconnection without displaying message to user.
+-Software log files now being placed in directory given in the application_config file field: BasePathToJSONFiles. If this directory doesn't exist then log files will be placed in original directory C:\SCBS\logs\.
+
+11/20/2020 VERSION 2.0.3.1
+
+- Bug fix: Laptop Battery was not displaying correctly. It now spans 2 columns to fit the battery level.
+
+
+11/20/2020 VERSION 2.0.3.0
+
+- This change report will be included with all auto-updates. Please read this with every auto-update.  The current_config_files directory will contain the most up-to-date config files with changes. PLEASE DO NOT COPY AND PASTE THEM TO YOUR DIRECTORY! Your settings will be overridden. These will not always have changes made, but any changes will be explicitly included in the change report. 
+- Changed UI and grouped all patient buttons to the lower half of the screen and research-only buttons to the upper left part of the screen. Buttons will have a blue border now.
+- Added current application version number to EventLog.json data.
+- Added more robustness to Switch.
+- Switch config file now uses local computer time instead of UTC time in the DateTimeLastSwitch field.
+- Align now has a progress bar and disables the align button while running.
+- New Log Download button - Can download application, event and mirror data with a button click. **NEW APP CONFIG FIELDS! See below**
+- Download event data on startup now available (just like the application and mirror). This separates the application and event logs since they used to come in one file.		 **NEW APP CONFIG FIELDS! See below**
+- Updated Libraries that needed to be updated
+- Added ability to hide all stim settings in the display. Default values are that all fields are shown.  **NEW APP CONFIG FIELDS! See below**
+- Switch button set to enabled previously hid the rate and amp to user. This has been changed so it does not automatically hide any stim settings. The stim settings must be changed in application_config prior to running application with new StimDisplaySettings functionality.
+- Switch will now set ld1 to be enabled in sense if it is enabled in the adaptive_config file. This overrides the ld1 parameter in the sense config file when running switch.
+- Changed the adaptive detection for weight/normalization and B0/B1 to multiply by FFVP instead of dividing by it. This is done for both LD0 and LD1.  This makes it in line with the Research app setup.
+
+application_config.json fields:
+
+{
+	"comment": "true if it is bilateral or false if it is unilateral. Switch is true if you want the switch tab functionality or false if you do not. Set align to true if you want the align button visible, you must have bilateral set true for this to work",
+	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
+	"Bilateral": true,
+	"Switch": true,
+	"Align": true,
+	"Montage": true,
+	"StimSweep": true,
+	"NewSession": true,
+	"HideReportButton": false,
+	"GetAdaptiveLogInfo": false,
+	"GetEventLogInfo": false,	//ADD THIS LINE FOR THE EVENT LOG ON STARTUP(DELETE THIS COMMENT)
+	"GetAdaptiveMirrorInfo": false,
+	"LogBeepEvent": true,
+	"CTMBeepEnables": {
+		"comment": "lets you choose what CTM Beeps you want enabled",
+		"None": true,	
+		"GeneralAlert": false,
+		"TelMCompleted": false,
+		"DeviceDiscovered": false,
+		"NoDeviceDiscovered": false,
+		"TelMLost": false
+	},
+	"WebPageButtons": {
+		"comment": "URL for webpage to open and if you want the button enabled and button text",
+		"OpenWithoutBeingConnected": true,
+		"WebPageOneButtonEnabled": true,
+		"WebPageOneURL": "https://www.google.com",
+		"WebPageOneButtonText": "Adaptive Patient Report",
+		"WebPageTwoButtonEnabled": true,
+		"WebPageTwoURL": "https://www.google.com",
+		"WebPageTwoButtonText": "Motor Diary"
+	},
+	"MoveGroupButton": {
+		"comment": "Allows you to move a specified group. GroupToMoveTo must be in format 'A', 'B', etc.  If a single INS, then use GroupToMoveToLeftUnilateral regardless of left or right",
+		"MoveGroupButtonText": "Adaptive OFF",
+		"MoveGroupButtonEnabled": true,
+		"GroupToMoveToLeftUnilateral": "B",
+		"GroupToMoveToRight": "B"
+	},
+	"LogDownloadButton": {	//ADD THIS OBJECT FOR THE DOWNLOAD LOG BUTTON FUNCTIONALITY (DELETE THIS COMMENT)
+		"comment": "Allows you to enable button that downloads mirror and application and event log data from INS.",
+		"LogDownloadButtonText": "Download Log",
+		"LogDownloadButtonEnabled": true,
+		"LogTypesToDownload":{
+			"ApplicationLog": true,
+			"EventLog": true,
+			"MirrorLog": true
+		}
+	},
+	"StimDisplaySettings":{		//ADD THIS OBJECT FOR ABILITY TO HIDE STIM DISPLAY SETTINGS(DELETE THIS COMMENT)
+		"comment": "Allows you to hide the stim settings display from user.",
+		"LeftUnilateralSettings":{
+			"HideGroup": false,
+			"HideAmp": false,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		},
+		"RightSettings":{
+			"HideGroup": false,
+			"HideAmp": false,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		}
+	}
+}

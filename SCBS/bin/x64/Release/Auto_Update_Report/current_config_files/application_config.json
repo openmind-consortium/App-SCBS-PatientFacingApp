@@ -1,0 +1,72 @@
+{
+	"comment": "true if it is bilateral or false if it is unilateral. Switch is true if you want the switch tab functionality or false if you do not. Set align to true if you want the align button visible, you must have bilateral set true for this to work",
+	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
+	"TurnOnResearcherTools": false,
+	"RunLeadIntegrityTestOnStartup": false,
+	"Bilateral": true,
+	"Switch": true,
+	"Align": true,
+	"Montage": true,
+	"StimSweep": true,
+	"NewSession": true,
+	"HideReportButton": false,
+	"GetAdaptiveLogInfo": false,
+	"GetEventLogInfo": false,
+	"GetAdaptiveMirrorInfo": false,
+	"LogBeepEvent": true,
+	"CTMBeepEnables": {
+		"comment": "lets you choose what CTM Beeps you want enabled",
+		"None": true,	
+		"GeneralAlert": false,
+		"TelMCompleted": false,
+		"DeviceDiscovered": false,
+		"NoDeviceDiscovered": false,
+		"TelMLost": false
+	},
+	"WebPageButtons": {
+		"comment": "URL for webpage to open and if you want the button enabled and button text",
+		"OpenWithoutBeingConnected": true,
+		"WebPageOneButtonEnabled": true,
+		"WebPageOneURL": "https://www.google.com",
+		"WebPageOneButtonText": "Website Name Here",
+		"WebPageTwoButtonEnabled": true,
+		"WebPageTwoURL": "https://www.google.com",
+		"WebPageTwoButtonText": "Different Website Here"
+	},
+	"MoveGroupButton": {
+		"comment": "Allows you to move a specified group. GroupToMoveTo must be in format 'A', 'B', etc.  If a single INS, then use GroupToMoveToLeftUnilateral regardless of left or right",
+		"MoveGroupButtonText": "Adaptive OFF",
+		"MoveGroupButtonEnabled": true,
+		"GroupToMoveToLeftUnilateral": "B",
+		"GroupToMoveToRight": "B"
+	},
+	"LogDownloadButton": {
+		"comment": "Allows you to enable button that downloads mirror and application and event log data from INS.",
+		"LogDownloadButtonText": "Download Log",
+		"LogDownloadButtonEnabled": true,
+		"LogTypesToDownload":{
+			"ApplicationLog": true,
+			"EventLog": true,
+			"MirrorLog": true
+		}
+	},
+	"StimDisplaySettings":{
+		"comment": "Allows you to hide the stim settings display from user.",
+		"LeftUnilateralSettings":{
+			"HideGroup": false,
+			"HideAmp": false,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		},
+		"RightSettings":{
+			"HideGroup": false,
+			"HideAmp": false,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		}
+	}
+}

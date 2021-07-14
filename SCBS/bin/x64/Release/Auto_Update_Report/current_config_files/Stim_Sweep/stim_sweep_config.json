@@ -1,0 +1,20 @@
+{
+	"comment": "Each index is one run. So the first index of each matrix contains the parameters for the first run and the second is the second run and so on. AmpInMa - is the amplitude in milliamps DBS will go to,  RateInHz is the frequency in Hz stimulate will be delivered at, PulseWidthInMicroSeconds is the pulse width for stimulation, TimeToRunInMilliSeconds is the time to run each stimulation run in milliseconds (the lowest is 100ms)- PLEASE ROUND TIMES TO THE NEAREST 100ms!, and EventMarkerDelayTimeInMilliSeconds is the duration after stimulation command has given that even marker is written. This is done to account for stimulation ramp up time that is set by RLP and to allow for easy data analysis. CurrentIndex is the index to run next",
+	"LeftINSOrUnilateral": {
+		"GroupToRunStimSweep": "C",
+		"RateInHz":					[130, 5, 130, 5, 130],
+		"Program":					[0,	0, 0, 0, 0],
+		"AmpInmA": 					[2,	0, 2, 0, 2],
+		"PulseWidthInMicroSeconds": [60, 60, 60, 60, 60]
+	},
+	"RightINS": {
+		"GroupToRunStimSweep": "B",
+		"RateInHz":					[5, 5, 5, 5, 5],
+		"Program":					[0, 0, 0, 0, 0],
+		"AmpInmA": 					[2,	0, 2, 0, 2],
+		"PulseWidthInMicroSeconds": [60, 60, 60, 60, 60]
+	},
+	"TimeToRunInMilliSeconds": 			[10000, 30000, 10000, 100, 30000],
+	"EventMarkerDelayTimeInMilliSeconds": 500,
+	"CurrentIndex": 0
+}

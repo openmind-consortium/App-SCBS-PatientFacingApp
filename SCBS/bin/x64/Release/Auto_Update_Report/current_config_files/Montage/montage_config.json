@@ -1,0 +1,17 @@
+{
+	"comment": "List of config files and times to run each one for Montage sweep",
+	"MontageFiles": [
+	  {
+		"Filename": "Montage500-01",
+		"TimeToRunInSeconds": 30
+	  },
+	  {
+		"Filename": "Montage500-02",
+		"TimeToRunInSeconds": 30
+	  },
+      {
+		"Filename": "Montage500-03",
+		"TimeToRunInSeconds": 30
+	  }
+	  ]
+}

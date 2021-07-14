@@ -1,0 +1,12 @@
+{
+	"Comment": "CurrentIndex starts at 0 and will load the index config file in ConfigNames.  ConfigNames contains just the names of the config files to load.  Do not include the .json ext or the directory path.  Each config file needs to go in C:\\SCBS\\switch\\left_default\\switch_left_default.json or C:\\SCBS\\switch\\right\\switch_right.json directory. DateTimeLastSwitch is in UTC time and is the last time the switch was ran. Use WaitTimeInMinutes to adjust the next time the user is able to run switch again and WaitTimeIsEnabled to enable it.",
+	"DateTimeLastSwitch": "12/15/2020 4:35:32 PM",
+	"WaitTimeInMinutes": 5,
+	"WaitTimeIsEnabled": false,
+	"CurrentIndex": 0,
+	"ConfigNames": [
+		"config1",
+		"config2",
+		"config3"
+	]
+}

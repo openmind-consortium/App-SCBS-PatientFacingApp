@@ -95,11 +95,11 @@ namespace SCBS.Models
         /// <summary>
         /// Weight Vector for each channel 0-3
         /// </summary>
-        public List<uint> WeightVector { get; set; }
+        public List<double> WeightVector { get; set; }
         /// <summary>
         /// Normalization Mulitply Vector for each channel 0-3
         /// </summary>
-        public List<uint> NormalizationMultiplyVector { get; set; }
+        public List<double> NormalizationMultiplyVector { get; set; }
         /// <summary>
         /// Normalization Subtract Vector for each channel 0-3
         /// </summary>
@@ -165,11 +165,11 @@ namespace SCBS.Models
         /// <summary>
         /// Weight Vector for each channel 0-3
         /// </summary>
-        public List<uint> WeightVector { get; set; }
+        public List<double> WeightVector { get; set; }
         /// <summary>
         /// Normalization Mulitply Vector for each channel 0-3
         /// </summary>
-        public List<uint> NormalizationMultiplyVector { get; set; }
+        public List<double> NormalizationMultiplyVector { get; set; }
         /// <summary>
         /// Normalization Subtract Vector for each channel 0-3
         /// </summary>
@@ -222,6 +222,22 @@ namespace SCBS.Models
         /// Program Object
         /// </summary>
         public Program0 Program0 { get; set; }
+        /// <summary>
+        /// Program Object
+        /// </summary>
+        public Program Program1 { get; set; }
+        /// <summary>
+        /// Program Object
+        /// </summary>
+        public Program Program2 { get; set; }
+        /// <summary>
+        /// Program Object
+        /// </summary>
+        public Program Program3 { get; set; }
+        /// <summary>
+        /// Rates Object
+        /// </summary>
+        public Rates Rates { get; set; }
     }
     /// <summary>
     /// Program Object
@@ -280,5 +296,119 @@ namespace SCBS.Models
         /// State 8 in mA, set to 25.5 to hold
         /// </summary>
         public double State8AmpInMilliamps { get; set; }
+    }
+    /// <summary>
+    /// Program Object
+    /// </summary>
+    public class Program
+    {
+        /// <summary>
+        /// Comment explaining object
+        /// </summary>
+        public string Comment { get; set; }
+        /// <summary>
+        /// Delta rise time
+        /// </summary>
+        public uint RiseTimes { get; set; }
+        /// <summary>
+        /// Delta fall time
+        /// </summary>
+        public uint FallTimes { get; set; }
+        /// <summary>
+        /// State 0 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State0AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 1 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State1AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 2 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State2AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 3 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State3AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 4 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State4AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 5 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State5AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 6 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State6AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 7 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State7AmpInMilliamps { get; set; }
+        /// <summary>
+        /// State 8 in mA, set to 25.5 to hold
+        /// </summary>
+        public double State8AmpInMilliamps { get; set; }
+    }
+    /// <summary>
+    /// Rates Object
+    /// </summary>
+    public class Rates
+    {
+        /// <summary>
+        /// Comment explaining object
+        /// </summary>
+        public string Comment { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State0 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State1 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State2 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State3 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State4 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State5 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State6 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State7 { get; set; }
+        /// <summary>
+        /// State Object
+        /// </summary>
+        public State State8 { get; set; }
+    }
+    /// <summary>
+    /// Rates Object
+    /// </summary>
+    public class State
+    {
+        /// <summary>
+        /// Target Rate in Hz
+        /// </summary>
+        public double RateTargetInHz { get; set; }
+        /// <summary>
+        /// Sense Friendly
+        /// </summary>
+        public bool SenseFriendly { get; set; }
     }
 }

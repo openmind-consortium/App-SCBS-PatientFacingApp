@@ -13,6 +13,10 @@ namespace SCBS.Models
     public class SenseModel
     {
         /// <summary>
+        /// desciption of json file
+        /// </summary>
+        public eventType eventType { get; set; }
+        /// <summary>
         /// Sets the Mode
         /// </summary>
         public ushort Mode { get; set; }
@@ -34,10 +38,28 @@ namespace SCBS.Models
         public Sense Sense { get; set; }
     }
     /// <summary>
+    /// Description of json
+    /// </summary>
+    public class eventType
+    {
+        /// <summary>
+        /// Comment
+        /// </summary>
+        public string comment { get; set; }
+        /// <summary>
+        /// Another comment
+        /// </summary>
+        public string type { get; set; }
+    }
+    /// <summary>
     /// SenseOption Object
     /// </summary>
     public class SenseOptions
     {
+        /// <summary>
+        /// comment
+        /// </summary>
+        public string comment { get; set; }
         /// <summary>
         /// Turns on or off timedomain for sense
         /// </summary>
@@ -77,6 +99,10 @@ namespace SCBS.Models
     public class StreamEnables
     {
         /// <summary>
+        /// comment
+        /// </summary>
+        public string comment { get; set; }
+        /// <summary>
         /// Turns streaming on for TimeDomain
         /// </summary>
         public bool TimeDomain { get; set; }
@@ -115,6 +141,14 @@ namespace SCBS.Models
     public class Sense
     {
         /// <summary>
+        /// comment
+        /// </summary>
+        public string commentTDChannelDefinitions { get; set; }
+        /// <summary>
+        /// comment
+        /// </summary>
+        public string commentFilters { get; set; }
+        /// <summary>
         /// Time domain sample rate in Hz
         /// </summary>
         public int TDSampleRate { get; set; }
@@ -126,6 +160,10 @@ namespace SCBS.Models
         /// FFT Object
         /// </summary>
         public FFT FFT { get; set; }
+        /// <summary>
+        /// comment
+        /// </summary>
+        public string commentPower { get; set; }
         /// <summary>
         /// Power band channel list
         /// </summary>
@@ -164,12 +202,20 @@ namespace SCBS.Models
         /// Anode and Cathode Inputs for the channel
         /// </summary>
         public List<int> Inputs { get; set; }
+        /// <summary>
+        /// Sets the TdEvokedResponseEnable to standard, evoked 0 or evoked 1
+        /// </summary>
+        public uint TdEvokedResponseEnable { get; set; }
     }
     /// <summary>
     /// FFT Object
     /// </summary>
     public class FFT
     {
+        /// <summary>
+        /// comment
+        /// </summary>
+        public string commentFFTParameters { get; set; }
         /// <summary>
         /// channel to stream FFT
         /// </summary>
@@ -198,6 +244,10 @@ namespace SCBS.Models
         /// Window enabled or not
         /// </summary>
         public bool WindowEnabled { get; set; }
+        /// <summary>
+        /// WeightMultiplies shift 0-7
+        /// </summary>
+        public uint WeightMultiplies { get; set; }
     }
     /// <summary>
     /// Power Object
@@ -205,9 +255,13 @@ namespace SCBS.Models
     public class Power
     {
         /// <summary>
+        /// comment
+        /// </summary>
+        public string comment { get; set; }
+        /// <summary>
         /// Lower power band in 0 index and upper power band in 1 index
         /// </summary>
-        public List<ushort> ChannelPowerBand { get; set; }
+        public List<double> ChannelPowerBand { get; set; }
         /// <summary>
         /// If the power channel is enabled or not
         /// </summary>
@@ -218,6 +272,10 @@ namespace SCBS.Models
     /// </summary>
     public class Accelerometer
     {
+        /// <summary>
+        /// comment
+        /// </summary>
+        public string commentAcc { get; set; }
         /// <summary>
         /// If the accelerometer is enabled or not
         /// </summary>
@@ -232,6 +290,10 @@ namespace SCBS.Models
     /// </summary>
     public class Misc
     {
+        /// <summary>
+        /// comment
+        /// </summary>
+        public string commentMiscParameters { get; set; }
         /// <summary>
         /// Streaming Rate
         /// </summary>

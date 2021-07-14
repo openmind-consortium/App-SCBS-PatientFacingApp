@@ -4,11 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using Caliburn.Micro;
 using Medtronic.SummitAPI.Classes;
 using Medtronic.TelemetryM;
 using Medtronic.TelemetryM.CtmProtocol.Commands;
 using SCBS.Models;
+using SCBS.ViewModels;
 
 namespace SCBS.Services
 {
@@ -17,6 +19,7 @@ namespace SCBS.Services
     /// </summary>
     public class ConnectRight : Connect
     {
+        private bool hasShownMessageToUser = true;
         /// <summary>
         /// Connects to CTM starting from the 0th value of the list of CTM's and works its way to the Nth.  This considered the right in bilateral
         /// </summary>
@@ -87,7 +90,11 @@ namespace SCBS.Services
             if (tempSummit == null)
             {
                 // inform user that CTM was not successfully connected to
-                _log.Warn("Failed to connect to CTM...");
+                if (hasShownMessageToUser)
+                {
+                    MainViewModel.ShowMessageBox("Could not connect to CTM. Check that CTM is placed correctly over INS on chest. If problem persists, please inform researcher of problem.", "Connection to CTM Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    hasShownMessageToUser = false;
+                }
                 return false;
             }
             else

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Media;
 using System.Threading;
 using SCBS.Services;
 using Medtronic.TelemetryM;
@@ -21,6 +20,8 @@ using System.IO;
 using Medtronic.NeuroStim.Olympus.Commands.Core.DataManagement;
 using Medtronic.TelemetryM.CtmProtocol.Commands;
 using System.Management;
+using System.Windows.Media;
+using Medtronic.NeuroStim.Olympus.DataTypes.Therapy;
 
 namespace SCBS.ViewModels
 {
@@ -35,6 +36,8 @@ namespace SCBS.ViewModels
         private BatteryLevels batteryLevelRight = new BatteryLevels();
         private SummitStimulationInfo stimInfoLeft;
         private SummitStimulationInfo stimInfoRight;
+        private StimParameterModel stimParameterModelLeft = new StimParameterModel();
+        private StimParameterModel stimParameterModelRight = new StimParameterModel();
         private volatile SummitSensing summitSensing;
         //If both connected then disable connect button
         private bool isLeftConnected = false;
@@ -61,6 +64,10 @@ namespace SCBS.ViewModels
         private volatile bool summitRightIsReadyForLeftToConnect = false;
         private static string leftPatientID, rightPatientID, leftDeviceID, rightDeviceID;
         private INSDataInfo dataInfoLeft, dataInfoRight;
+        //Flag to check if log data from device was already logged
+        private volatile bool logDataOnLeftReceived = false;
+        private volatile bool logDataOnRightReceived = false;
+        private volatile bool flagTrueIfLeadIntegrityHasBeenAskedAtStartup = false;
 
         #region Worker Threads
         private void WorkerThreadLeft()
@@ -93,7 +100,6 @@ namespace SCBS.ViewModels
                 else
                 {
                     _log.Info("Connection Successful in Left");
-
                     //Need to check if the INS got switched up.
                     //IF they did then we need to switch the summit systems so that the correct INS can get the correct config file.
                     //One issue is that the ctm for that side will be backwards, but better to have correct INS connection
@@ -155,6 +161,7 @@ namespace SCBS.ViewModels
                         //Log the location data for right
                         try
                         {
+                            theSummitRight.LogCustomEvent(DateTime.Now, DateTime.Now, "Application Version", versionNumber);
                             theSummitRight.LogCustomEvent(DateTime.Now, DateTime.Now, "LeadLocationOne", dataInfoRight.GetLeadLocationOne());
                             theSummitRight.LogCustomEvent(DateTime.Now, DateTime.Now, "LeadLocationTwo", dataInfoRight.GetLeadLocationTwo());
                         }
@@ -163,10 +170,11 @@ namespace SCBS.ViewModels
                             _log.Error(e);
                         }
                     }
-                    waitUntilCheckForCorrectINS = false;
-                    //log the location data for left
+                    
+                    //log the lead location and version data for left
                     try
                     {
+                        theSummitLeft.LogCustomEvent(DateTime.Now, DateTime.Now, "Application Version", versionNumber);
                         theSummitLeft.LogCustomEvent(DateTime.Now, DateTime.Now, "LeadLocationOne", dataInfoLeft.GetLeadLocationOne());
                         theSummitLeft.LogCustomEvent(DateTime.Now, DateTime.Now, "LeadLocationTwo", dataInfoLeft.GetLeadLocationTwo());
                     }
@@ -174,12 +182,15 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                     }
-
-                    //Update UI for statuses
                     UpdateStimStatusGroupLeft();
+                    //Update UI for statuses
+                    if (appConfigModel.TurnOnResearcherTools)
+                    {
+                        StimSettingButtonsEnabled = true;
+                    }
                     GetBatteryLevelsLeft();
                     isLeftConnected = true;
-
+                    waitUntilCheckForCorrectINS = false;
                     //Get Device info
                     leftDeviceID = dataInfoLeft.GetDeviceID(theSummitLeft);
                     if (leftDeviceID == null)
@@ -200,32 +211,42 @@ namespace SCBS.ViewModels
 
                     string logPath = "";
                     //Create filepath for left or right
-                    if (appConfigModel.GetAdaptiveLogInfo || appConfigModel.GetAdaptiveMirrorInfo)
+                    if ((appConfigModel.GetAdaptiveLogInfo || appConfigModel.GetAdaptiveMirrorInfo || appConfigModel.GetEventLogInfo) && !logDataOnLeftReceived)
                     {
                         logPath = GetDirectoryPathForCurrentSession(theSummitLeft, PROJECT_ID, leftPatientID, leftDeviceID);
-                        logPath += @"\LogDataFromLeftINS\";  
-                    }
-                    //Get Log info and write to file
-                    if (appConfigModel.GetAdaptiveLogInfo)
-                    {
-                        IsSpinnerVisible = true;
-                        //run get logs
-                        GetApplicationLogInfo(theSummitLeft, logPath);
-                        IsSpinnerVisible = false;
+                        logPath += @"\LogDataFromLeftUnilateralINS\";  
                     }
                     //Get mirror info and write to file
-                    if (appConfigModel.GetAdaptiveMirrorInfo)
+                    if (appConfigModel.GetAdaptiveMirrorInfo && !logDataOnLeftReceived)
                     {
                         IsSpinnerVisible = true;
                         //run get logs
                         GetApplicationMirrorData(theSummitLeft, logPath, appConfigModel);
                         IsSpinnerVisible = false;
                     }
-
+                    //Get application Log info and write to file
+                    if (appConfigModel.GetAdaptiveLogInfo && !logDataOnLeftReceived)
+                    {
+                        IsSpinnerVisible = true;
+                        //run get logs
+                        GetApplicationLogInfo(theSummitLeft, logPath, FlashLogTypes.Application, "AppLog");
+                        IsSpinnerVisible = false;
+                    }
+                    //Get event Log info and write to file
+                    if (appConfigModel.GetEventLogInfo && !logDataOnLeftReceived)
+                    {
+                        IsSpinnerVisible = true;
+                        //run get logs
+                        GetApplicationLogInfo(theSummitLeft, logPath, FlashLogTypes.Event, "EventLog");
+                        IsSpinnerVisible = false;
+                    }
+                    logDataOnLeftReceived = true;
                     //Tries to configure and start sensing for 5 times. If it doesn't work then continue main while loop. 
                     //if it does work and gets to the last item, then break out of while loop
                     //this ensures that if we are already connected that we don't continue the main while loop and try and connect again.
+
                     int counter = 5;
+                    
                     while(counter > 0)
                     {
                         try
@@ -264,15 +285,17 @@ namespace SCBS.ViewModels
                         if (!RegisterDataListeners(theSummitLeft, true))
                         {
                             _log.Info("Could not register data listeners in Left");
+                            counter--;
                             continue;
                         }
                         break;
                     }
                     if(counter == 0)
                     {
+                        _log.Warn("Counter in left while loop for starting stream ran all the way to 0");
                         continue;
                     }
-
+                    
                     SensingState state;
                     //This checks to see if sensing is already enabled. This can happen if adaptive is already running and we don't need to configure it. 
                     //If it is, then skip setting up sensing
@@ -286,6 +309,7 @@ namespace SCBS.ViewModels
                             do
                             {
                                 bufferReturnInfo = theSummitLeft.LogCustomEvent(DateTime.Now, DateTime.Now, "Adaptive On", DateTime.Now.ToString("MM_dd_yyyy hh:mm:ss tt"));
+                                counter--;
                             } while (bufferReturnInfo.RejectCode != 0 && counter > 0);
                             if (counter == 0)
                             {
@@ -316,16 +340,30 @@ namespace SCBS.ViewModels
                     LaptopBatteryLevel = GetLaptopBatteryPercent().ToString();
 
                     //Start stopwatch
+                    stopWatchChangeTimer.Start();
+                    dispatcherChangeTimer.Start();
+                    stopWatchChangeTimer.Reset();
+                    stopWatchChangeTimer.Start();
                     stopWatchLeft.Start();
                     dispatcherTimerLeft.Start();
                     // Worker thread to loop in inner loop while system is connected
                     Console.WriteLine("Inside the worker loop");
                     _log.Info("Inside worker loop in left");
                     //_shouldStopDoWhileLoop will stop the loop if theSummitLeft is disposed and main while loop will run summitConnect again to reconnect.
+                    
                     bool _shouldStopDoWhileLoop = false;
+                    AlignButtonEnabled = true;
+                    UpdateSenseButtonEnabled = true;
+
+                    if (appConfigModel.RunLeadIntegrityTestOnStartup && !flagTrueIfLeadIntegrityHasBeenAskedAtStartup)
+                    {
+                        LeadIntegrityButtonClick();
+                        flagTrueIfLeadIntegrityHasBeenAskedAtStartup = true;
+                    }
+
                     do
                     {
-                        Thread.Sleep(1000);
+                        //Thread.Sleep(500);
                         if (theSummitLeft != null)
                         {
                             if (theSummitLeft.IsDisposed)
@@ -365,6 +403,9 @@ namespace SCBS.ViewModels
                             _shouldStopDoWhileLoop = true;
                             _log.Info("INS battery below " + minINSBatteryLevelAmount + "%.  Stopping sensing");
                         }
+                        TelemetryModuleInfo telem_info = null;
+                        theSummitLeft.ReadTelemetryModuleInfo(out telem_info);
+                        Thread.Sleep(8000);
                     } while (!_shouldStopDoWhileLoop && !_shouldStopWorkerThread);
                     //Stop stopwatch
                     stopWatchLeft.Stop();
@@ -376,6 +417,7 @@ namespace SCBS.ViewModels
                     CanConnect = true;
                     ConnectButtonText = "Connecting";
                     ConnectButtonColor = Brushes.Yellow;
+                    AlignButtonEnabled = false;
                 }
             }
             DisposeSummitManagerAndSystem();
@@ -411,7 +453,7 @@ namespace SCBS.ViewModels
                 else
                 {
                     _log.Info("Connection Successful in Right");
-
+                    
                     summitRightIsReadyForLeftToConnect = true;
                     //need to wait until left is done checking to see if the INS were switched around.
                     //Once done then it can move on
@@ -449,29 +491,38 @@ namespace SCBS.ViewModels
 
                     string logPath = "";
                     //Create filepath for left or right
-                    if (appConfigModel.GetAdaptiveLogInfo || appConfigModel.GetAdaptiveMirrorInfo)
+                    if ((appConfigModel.GetAdaptiveLogInfo || appConfigModel.GetAdaptiveMirrorInfo || appConfigModel.GetEventLogInfo) && !logDataOnRightReceived)
                     {
                         logPath = GetDirectoryPathForCurrentSession(theSummitRight, PROJECT_ID, rightPatientID, rightDeviceID);
                         logPath += @"\LogDataFromRightINS\";
                     }
-
-                    //Get Log info and write to file if set to true
-                    if (appConfigModel.GetAdaptiveLogInfo)
-                    {
-                        IsSpinnerVisible = true;
-                        //run get logs
-                        GetApplicationLogInfo(theSummitRight, logPath);
-                        IsSpinnerVisible = false;
-                    }
-
                     //Get mirror data and write to file if set to true
-                    if (appConfigModel.GetAdaptiveMirrorInfo)
+                    if (appConfigModel.GetAdaptiveMirrorInfo && !logDataOnRightReceived)
                     {
                         IsSpinnerVisible = true;
                         //run get logs
                         GetApplicationMirrorData(theSummitRight, logPath, appConfigModel);
                         IsSpinnerVisible = false;
                     }
+                    //Get application Log info and write to file if set to true
+                    if (appConfigModel.GetAdaptiveLogInfo && !logDataOnRightReceived)
+                    {
+                        IsSpinnerVisible = true;
+                        //run get logs
+                        GetApplicationLogInfo(theSummitRight, logPath, FlashLogTypes.Application, "AppLog");
+                        IsSpinnerVisible = false;
+                    }
+                    //Get event Log info and write to file if set to true
+                    if (appConfigModel.GetEventLogInfo && !logDataOnRightReceived)
+                    {
+                        IsSpinnerVisible = true;
+                        //run get logs
+                        GetApplicationLogInfo(theSummitRight, logPath, FlashLogTypes.Event, "EventLog");
+                        IsSpinnerVisible = false;
+                    }
+                    logDataOnRightReceived = true;
+                    
+
                     //Tries to configure and start sensing for 5 times. If it doesn't work then continue main while loop. 
                     //if it does work and gets to the last item, then break out of while loop
                     //this ensures that if we are already connected that we don't continue the main while loop and try and connect again.
@@ -485,6 +536,7 @@ namespace SCBS.ViewModels
                             {
                                 _log.Info("Could not configure sensing in Right");
                                 counter--;
+                                Thread.Sleep(500);
                                 continue;
                             }
                         }
@@ -493,6 +545,7 @@ namespace SCBS.ViewModels
                             _log.Error(error);
                             ShowMessageBox("Could not configure sensing in Right. Please check that config file is correct");
                             counter--;
+                            Thread.Sleep(500);
                             continue;
                         }
 
@@ -502,6 +555,7 @@ namespace SCBS.ViewModels
                             {
                                 _log.Info("Could not start sensing in Right");
                                 counter--;
+                                Thread.Sleep(500);
                                 continue;
                             }
                         }
@@ -510,6 +564,7 @@ namespace SCBS.ViewModels
                             _log.Error(error);
                             ShowMessageBox("Could not configure sensing in Right. Please check that config file is correct");
                             counter--;
+                            Thread.Sleep(500);
                             continue;
                         }
 
@@ -517,6 +572,7 @@ namespace SCBS.ViewModels
                         {
                             _log.Info("Could not register data listeners in Right");
                             counter--;
+                            Thread.Sleep(500);
                             continue;
                         }
                         break;
@@ -527,7 +583,7 @@ namespace SCBS.ViewModels
                         continue;
                     }
                     _log.Info("Right side read sense state to determine adaptive status");
-
+                    
                     SensingState state;
                     //This checks to see if sensing is already enabled. This can happen if adaptive is already running and we don't need to configure it. 
                     //If it is, then skip setting up sensing
@@ -574,10 +630,11 @@ namespace SCBS.ViewModels
                     // Worker thread to loop in inner loop while system is connected
                     _log.Info("Inside the worker loop Right");
                     //_shouldStopDoWhileLoop will stop the loop if theSummitLeft is disposed and main while loop will run summitConnect again to reconnect.
+                    
                     bool _shouldStopDoWhileLoop = false;
                     do
                     {
-                        Thread.Sleep(1000);
+                        
                         if (theSummitRight != null)
                         {
                             if (theSummitRight.IsDisposed)
@@ -608,6 +665,9 @@ namespace SCBS.ViewModels
                             _shouldStopWorkerThread = true;
                             _shouldStopDoWhileLoop = true;
                         }
+                        TelemetryModuleInfo telem_info = null;
+                        theSummitRight.ReadTelemetryModuleInfo(out telem_info);
+                        Thread.Sleep(8000);
                     } while (!_shouldStopDoWhileLoop && !_shouldStopWorkerThread);
                     _log.Warn("Right thread out of worker loop");
                     //Stop stream timers
@@ -783,11 +843,91 @@ namespace SCBS.ViewModels
         {
             ActiveGroupLeft = stimInfoLeft.GetActiveGroup(ref theSummitLeft);
             StimStateLeft = stimInfoLeft.GetTherapyStatus(ref theSummitLeft);
-            StimParameterModel localModel = new StimParameterModel("", "", "", "", null);
-            localModel = GetStimParamsBasedOnGroup(theSummitLeft, stimInfoLeft, ActiveGroupLeft);
-            StimAmpLeft = localModel.StimAmp;
-            StimRateLeft = localModel.StimRate;
-            StimElectrodeLeft = localModel.StimElectrodes;
+            stimParameterModelLeft = stimInfoLeft.GetStimParamsBasedOnGroup(theSummitLeft, ActiveGroupLeft, ProgramOptionsLeft.IndexOf(SelectedProgramLeft));
+            StimAmpLeft = stimParameterModelLeft.StimAmp + " mA";
+            StimRateLeft = stimParameterModelLeft.StimRate + " Hz";
+            StimElectrodeLeft = stimParameterModelLeft.StimElectrodes;
+            StimLeftPWDisplay = stimParameterModelLeft.PulseWidth + " µS";
+            if(stimParameterModelLeft.TherapyGroup != null)
+            {
+                ActiveRechargeLeftStatus = stimParameterModelLeft.TherapyGroup.Programs[ProgramOptionsLeft.IndexOf(SelectedProgramLeft)].MiscSettings.ActiveRechargeRatio.Equals(ActiveRechargeRatios.PassiveOnly) ? "Passive Recharge" : "Active Recharge";
+                RateLowerLimitLeft = stimParameterModelLeft.TherapyGroup.RateLowerLimitInHz;
+                RateUpperLimitLeft = stimParameterModelLeft.TherapyGroup.RateUpperLimitInHz;
+                PWLowerLimitLeft = stimParameterModelLeft.TherapyGroup.PulseWidthLowerLimitInMicroseconds;
+                PWUpperLimitLeft = stimParameterModelLeft.TherapyGroup.PulseWidthUpperLimitInMicroseconds;
+            }
+            if(stimParameterModelLeft.AmpLimits != null)
+            {
+                UpdateLeftUpperLowerStimAmp();
+            }
+
+            switch (ActiveGroupLeft)
+            {
+                case "Group A":
+                    GroupALeftButtonEnabled = false;
+                    GroupBLeftButtonEnabled = true;
+                    GroupCLeftButtonEnabled = true;
+                    GroupDLeftButtonEnabled = true;
+                    break;
+                case "Group B":
+                    GroupALeftButtonEnabled = true;
+                    GroupBLeftButtonEnabled = false;
+                    GroupCLeftButtonEnabled = true;
+                    GroupDLeftButtonEnabled = true;
+                    break;
+                case "Group C":
+                    GroupALeftButtonEnabled = true;
+                    GroupBLeftButtonEnabled = true;
+                    GroupCLeftButtonEnabled = false;
+                    GroupDLeftButtonEnabled = true;
+                    break;
+                case "Group D":
+                    GroupALeftButtonEnabled = true;
+                    GroupBLeftButtonEnabled = true;
+                    GroupCLeftButtonEnabled = true;
+                    GroupDLeftButtonEnabled = false;
+                    break;
+                default:
+
+                    break;
+            }
+
+            if (StimStateLeft.Equals("TherapyOff"))
+            {
+                StimOnLeftButtonEnabled = true;
+                StimOffLeftButtonEnabled = false;
+                TherapyStatusBackgroundLeft = Brushes.LightGray;
+            }
+            else
+            {
+                StimOnLeftButtonEnabled = false;
+                StimOffLeftButtonEnabled = true;
+                TherapyStatusBackgroundLeft = Brushes.ForestGreen;
+            }
+        }
+        private void UpdateLeftUpperLowerStimAmp()
+        {
+            switch (SelectedProgramLeft)
+            {
+                case program0Option:
+                    AmpLowerLimitLeft = stimParameterModelLeft.AmpLimits.Prog0LowerInMilliamps;
+                    AmpUpperLimitLeft = stimParameterModelLeft.AmpLimits.Prog0UpperInMilliamps;
+                    break;
+                case program1Option:
+                    AmpLowerLimitLeft = stimParameterModelLeft.AmpLimits.Prog1LowerInMilliamps;
+                    AmpUpperLimitLeft = stimParameterModelLeft.AmpLimits.Prog1UpperInMilliamps;
+                    break;
+                case program2Option:
+                    AmpLowerLimitLeft = stimParameterModelLeft.AmpLimits.Prog2LowerInMilliamps;
+                    AmpUpperLimitLeft = stimParameterModelLeft.AmpLimits.Prog2UpperInMilliamps;
+                    break;
+                case program3Option:
+                    AmpLowerLimitLeft = stimParameterModelLeft.AmpLimits.Prog3LowerInMilliamps;
+                    AmpUpperLimitLeft = stimParameterModelLeft.AmpLimits.Prog3UpperInMilliamps;
+                    break;
+                default:
+                    break;
+            }
         }
         /// <summary>
         /// Updates the UI for Stim Status for Right
@@ -796,46 +936,90 @@ namespace SCBS.ViewModels
         {
             ActiveGroupRight = stimInfoRight.GetActiveGroup(ref theSummitRight);
             StimStateRight = stimInfoRight.GetTherapyStatus(ref theSummitRight);
-            StimParameterModel localModel = new StimParameterModel("", "", "", "", null);
-            localModel = GetStimParamsBasedOnGroup(theSummitRight, stimInfoRight, ActiveGroupRight);
-            StimAmpRight = localModel.StimAmp;
-            StimRateRight = localModel.StimRate;
-            StimElectrodeRight = localModel.StimElectrodes;
-        }
-        /// <summary>
-        /// This maybe should go into a different class like Stimulation.cs, but it's here for now. 
-        ///It gets the group stim params based on the group that was read from the device.
-        ///if Group b was read from the device, then it gets the params for that specific group.
-        /// </summary>
-        /// <param name="theSummit">Summit System</param>
-        /// <param name="stimulation">The stimulation info model</param>
-        /// <param name="group">Active Group after being converted</param>
-        /// <returns>StimParameterModel filled with data</returns>
-        private StimParameterModel GetStimParamsBasedOnGroup(SummitSystem theSummit, SummitStimulationInfo stimulation, string group)
-        {
-            StimParameterModel stimParam = new StimParameterModel("", "", "", "", null);
-            if (string.IsNullOrEmpty(group))
+            stimParameterModelRight = stimInfoRight.GetStimParamsBasedOnGroup(theSummitRight, ActiveGroupRight, ProgramOptionsRight.IndexOf(SelectedProgramRight));
+            StimAmpRight = stimParameterModelRight.StimAmp + " mA";
+            StimRateRight = stimParameterModelRight.StimRate + " Hz";
+            StimElectrodeRight = stimParameterModelRight.StimElectrodes;
+            StimRightPWDisplay = stimParameterModelRight.PulseWidth + " µS";
+            if (stimParameterModelRight.TherapyGroup != null)
             {
-                return stimParam;
+                ActiveRechargeRightStatus = stimParameterModelRight.TherapyGroup.Programs[ProgramOptionsRight.IndexOf(SelectedProgramRight)].MiscSettings.ActiveRechargeRatio.Equals(ActiveRechargeRatios.PassiveOnly) ? "Passive Recharge" : "Active Recharge";
+                RateLowerLimitRight = stimParameterModelRight.TherapyGroup.RateLowerLimitInHz;
+                RateUpperLimitRight = stimParameterModelRight.TherapyGroup.RateUpperLimitInHz;
+                PWLowerLimitRight = stimParameterModelRight.TherapyGroup.PulseWidthLowerLimitInMicroseconds;
+                PWUpperLimitRight = stimParameterModelRight.TherapyGroup.PulseWidthUpperLimitInMicroseconds;
             }
-            switch (group)
+            if (stimParameterModelRight.AmpLimits != null)
+            {
+                UpdateRightUpperLowerStimAmp();
+            }
+            switch (ActiveGroupRight)
             {
                 case "Group A":
-                    stimParam = stimulation.GetStimParameterModelGroupA(ref theSummit);
+                    GroupARightButtonEnabled = false;
+                    GroupBRightButtonEnabled = true;
+                    GroupCRightButtonEnabled = true;
+                    GroupDRightButtonEnabled = true;
                     break;
                 case "Group B":
-                    stimParam = stimulation.GetStimParameterModelGroupB(ref theSummit);
+                    GroupARightButtonEnabled = true;
+                    GroupBRightButtonEnabled = false;
+                    GroupCRightButtonEnabled = true;
+                    GroupDRightButtonEnabled = true;
                     break;
                 case "Group C":
-                    stimParam = stimulation.GetStimParameterModelGroupC(ref theSummit);
+                    GroupARightButtonEnabled = true;
+                    GroupBRightButtonEnabled = true;
+                    GroupCRightButtonEnabled = false;
+                    GroupDRightButtonEnabled = true;
                     break;
                 case "Group D":
-                    stimParam = stimulation.GetStimParameterModelGroupD(ref theSummit);
+                    GroupARightButtonEnabled = true;
+                    GroupBRightButtonEnabled = true;
+                    GroupCRightButtonEnabled = true;
+                    GroupDRightButtonEnabled = false;
+                    break;
+                default:
+
+                    break;
+            }
+
+            if (StimStateRight.Equals("TherapyOff"))
+            {
+                StimOnRightButtonEnabled = true;
+                StimOffRightButtonEnabled = false;
+                TherapyStatusBackgroundRight = Brushes.LightGray;
+            }
+            else
+            {
+                StimOnRightButtonEnabled = false;
+                StimOffRightButtonEnabled = true;
+                TherapyStatusBackgroundRight = Brushes.ForestGreen;
+            }
+        }
+        private void UpdateRightUpperLowerStimAmp()
+        {
+            switch (SelectedProgramRight)
+            {
+                case program0Option:
+                    AmpLowerLimitRight = stimParameterModelRight.AmpLimits.Prog0LowerInMilliamps;
+                    AmpUpperLimitRight = stimParameterModelRight.AmpLimits.Prog0UpperInMilliamps;
+                    break;
+                case program1Option:
+                    AmpLowerLimitRight = stimParameterModelRight.AmpLimits.Prog1LowerInMilliamps;
+                    AmpUpperLimitRight = stimParameterModelRight.AmpLimits.Prog1UpperInMilliamps;
+                    break;
+                case program2Option:
+                    AmpLowerLimitRight = stimParameterModelRight.AmpLimits.Prog2LowerInMilliamps;
+                    AmpUpperLimitRight = stimParameterModelRight.AmpLimits.Prog2UpperInMilliamps;
+                    break;
+                case program3Option:
+                    AmpLowerLimitRight = stimParameterModelRight.AmpLimits.Prog3LowerInMilliamps;
+                    AmpUpperLimitRight = stimParameterModelRight.AmpLimits.Prog3UpperInMilliamps;
                     break;
                 default:
                     break;
             }
-            return stimParam;
         }
         #endregion
 
@@ -908,6 +1092,7 @@ namespace SCBS.ViewModels
                     theLocalSummit.DataReceivedPowerHandler += theSummit_DataReceived_Power_Left;
                     theLocalSummit.DataReceivedFFTHandler += theSummit_DataReceived_FFT_Left;
                     theLocalSummit.DataReceivedAccelHandler += theSummit_DataReceived_Accel_Left;
+                    theLocalSummit.DataReceivedDetectorHandler += theSummit_DataReceived_Detector_Left;
                     flagForStreamingPacketsLeft = true;
                     aTimerLeft.Interval = interval.TotalMilliseconds;
                     // Hook up the event handler for the Elapsed event.
@@ -931,6 +1116,7 @@ namespace SCBS.ViewModels
                     theLocalSummit.DataReceivedPowerHandler += theSummit_DataReceived_Power_Right;
                     theLocalSummit.DataReceivedFFTHandler += theSummit_DataReceived_FFT_Right;
                     theLocalSummit.DataReceivedAccelHandler += theSummit_DataReceived_Accel_Right;
+                    theLocalSummit.DataReceivedDetectorHandler += theSummit_DataReceived_Detector_Right;
                     flagForStreamingPacketsRight = true;
                     aTimerRight.Interval = interval.TotalMilliseconds;
                     // Hook up the event handler for the Elapsed event.
@@ -1133,6 +1319,30 @@ namespace SCBS.ViewModels
             }
         }
 
+        private void theSummit_DataReceived_Detector_Left(object sender, AdaptiveDetectEvent adaptiveDetectEvent)
+        {
+            // Announce that packet was received by handler
+            //Console.WriteLine("AccelPacket Received, Global SeqNum:" + AccelSenseEvent.Header.GlobalSequence.ToString());
+            // Log some information about the received packet out to file
+            //theSummit.LogCustomEvent(AccelSenseEvent.GenerationTimeEstimate, DateTime.Now, "TdPacketReceived", AccelSenseEvent.Header.GlobalSequence.ToString());
+            StimAmpLeft = adaptiveDetectEvent.CurrentProgramAmplitudesInMilliamps[ProgramOptionsLeft.IndexOf(SelectedProgramLeft)].ToString() + " mA";
+            ResetTimerLeft();
+            if (!flagForStreamingPacketsLeft)
+            {
+                flagForStreamingPacketsLeft = true;
+                TurnStreamingGreenLeft();
+                try
+                {
+                    stopWatchLeft.Start();
+                    dispatcherTimerLeft.Start();
+                }
+                catch (Exception error)
+                {
+                    _log.Error(error);
+                }
+            }
+        }
+
         /// <summary>
         /// Sensing data received event handlers
         /// </summary>
@@ -1232,37 +1442,62 @@ namespace SCBS.ViewModels
                 }
             }
         }
+        private void theSummit_DataReceived_Detector_Right(object sender, AdaptiveDetectEvent adaptiveDetectEvent)
+        {
+            // Announce that packet was received by handler
+            //Console.WriteLine("AccelPacket Received, Global SeqNum:" + AccelSenseEvent.Header.GlobalSequence.ToString());
+            // Log some information about the received packet out to file
+            //theSummit.LogCustomEvent(AccelSenseEvent.GenerationTimeEstimate, DateTime.Now, "TdPacketReceived", AccelSenseEvent.Header.GlobalSequence.ToString());
+            StimAmpRight = adaptiveDetectEvent.CurrentProgramAmplitudesInMilliamps[ProgramOptionsRight.IndexOf(SelectedProgramRight)].ToString() + " mA";
+            ResetTimerRight();
+            if (!flagForStreamingPacketsRight)
+            {
+                flagForStreamingPacketsRight = true;
+                TurnStreamingGreenRight();
+                try
+                {
+                    stopWatchRight.Start();
+                    dispatcherTimerRight.Start();
+                }
+                catch (Exception error)
+                {
+                    _log.Error(error);
+                }
+            }
+        }
         #endregion
 
         #region Gets Log and Mirror info and write to file
-        private void GetApplicationLogInfo(SummitSystem localSummit, string logPath)
+        private bool GetApplicationLogInfo(SummitSystem localSummit, string logPath, FlashLogTypes logType, string logTypeName)
         {
             List<LogEntry> entries = null;
             APIReturnInfo? result;
             try
             {
-                result = localSummit?.FlashLogReadLogEntry(FlashLogTypes.Application, ushort.MaxValue, out entries, true, 0x04, 0x00);
+                result = localSummit?.FlashLogReadLogEntry(logType, ushort.MaxValue, out entries);
             }
             catch (Exception e)
             {
                 _log.Error(e);
-                MessageBox.Show("Could not write adaptive log data to file. Please check filepath for directories and restart application to try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                WriteEventLog(localSummit, "Adaptive Event Log Data Unsuccessful", "Could not log Adaptive Log data success in event log. Please report error to clinician.");
-                return;
+                MessageBox.Show("Could not write log data to file. Please check filepath for directories and restart application to try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                WriteEventLog(localSummit, "Log Data Unsuccessful", "Could not Log data success in event log. Please report error to clinician.");
+                return false;
             }
-            if (WriteLogDataToFile(logPath, entries))
+            if (WriteLogDataToFile(logPath, logTypeName, entries))
             {
-                _log.Info("Write adaptive log data to file successful");
-                WriteEventLog(localSummit, "Adaptive Event Log Data Success", "Could not log Adaptive Log data success in event log. Please report error to clinician.");
+                _log.Info("Write log data to file successful");
+                WriteEventLog(localSummit, "Log Data Success", "Log data successful in event log.");
+                return true;
             }
             else
             {
-                WriteEventLog(localSummit, "Adaptive Event Log Data Unsuccessful", "Could not log Adaptive Log data success in event log. Please report error to clinician.");
-                _log.Warn("Write adaptive log data to file unsuccessful");
+                WriteEventLog(localSummit, "Log Data Unsuccessful", "Could not Log data success in event log. Please report error to clinician.");
+                _log.Warn("Write log data to file unsuccessful");
+                return false;
             }
         }
 
-        private void GetApplicationMirrorData(SummitSystem localSummit, string logPath, AppModel localAppModel)
+        private bool GetApplicationMirrorData(SummitSystem localSummit, string logPath, AppModel localAppModel)
         {
             APIReturnInfo? result;
             //Get the mirror log for ld states
@@ -1277,27 +1512,29 @@ namespace SCBS.ViewModels
                 _log.Error(e);
                 MessageBox.Show("Could not write mirror log data to file. Please check filepath for directories and restart application to try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 WriteEventLog(localSummit, "Mirror Event Log Unsuccessful", "Could not log mirror log info success in event log. Please report error to clinician.");
-                return;
+                return false;
             }
             if (WriteFlashDataToFile(logPath, mirrorData))
             {
                 _log.Info("Write flash data to file successful");
                 WriteEventLog(localSummit, "Mirror Event Log Success", "Could not log mirror log info success in event log. Please report error to clinician.");
+                return true;
             }
             else
             {
                 WriteEventLog(localSummit, "Mirror Event Log Unsuccessful", "Could not log mirror log info success in event log. Please report error to clinician.");
                 _log.Warn("Write flash data to file unsuccessful");
+                return false;
             }
         }
 
-        private bool WriteLogDataToFile(string filepath, List<LogEntry> entries)
+        private bool WriteLogDataToFile(string filepath, string logType, List<LogEntry> entries)
         {
             bool success = false;
             if (entries == null)
             {
                 _log.Warn("Could not log entries to file because list was null");
-                MessageBox.Show("Could not write adaptive log data to file.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Could not write log data to file.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
                 return success;
             }
             //if directory doesn't exits, create it
@@ -1308,19 +1545,19 @@ namespace SCBS.ViewModels
                     Directory.CreateDirectory(fileInfo.Directory.FullName);
                 if (!Directory.Exists(fileInfo.Directory.FullName))
                 {
-                    MessageBox.Show("Could not create directory for writing adaptive log files. Please be sure the application_config.json BasePathToJSONFiles has the same path as DataDirectory in the Registry Editor for the path Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Medtronic\\ORCA. Please fix and restart application to log the files", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Could not create directory for writing log files. Please be sure the application_config.json BasePathToJSONFiles has the same path as DataDirectory in the Registry Editor for the path Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Medtronic\\ORCA. Please fix and restart application to log the files", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return success;
                 }
             }
             catch (Exception e)
             {
-                MessageBox.Show("Could not create directory for writing adaptive log files. Please be sure the application_config.json BasePathToJSONFiles has the same path as DataDirectory in the Registry Editor for the path Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Medtronic\\ORCA. Please fix and restart application to log the files", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Could not create directory for writing log files. Please be sure the application_config.json BasePathToJSONFiles has the same path as DataDirectory in the Registry Editor for the path Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Medtronic\\ORCA. Please fix and restart application to log the files", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 _log.Error(e);
                 return success;
             }
             try
             {
-                StreamWriter outputFile = new StreamWriter(Path.Combine(filepath, DateTime.Now.ToString("yyyy-dd-M_HH-mm-ss") + "LOG.txt"));
+                StreamWriter outputFile = new StreamWriter(Path.Combine(filepath, DateTime.Now.ToString("yyyy-dd-M_HH-mm-ss") + logType + ".txt"));
                 foreach (LogEntry log in entries)
                 {
                     outputFile.WriteLine(log.ToString());
@@ -1366,7 +1603,7 @@ namespace SCBS.ViewModels
             }
             try
             {
-                StreamWriter outputFile = new StreamWriter(Path.Combine(filepath, DateTime.Now.ToString("yyyy-dd-M_HH-mm-ss") + "MIRROR.txt"));
+                StreamWriter outputFile = new StreamWriter(Path.Combine(filepath, DateTime.Now.ToString("yyyy-dd-M_HH-mm-ss") + "MirrorLog.txt"));
                 outputFile.WriteLine(mirrorData);
                 success = true;
             }
@@ -1598,6 +1835,7 @@ namespace SCBS.ViewModels
                 do
                 {
                     bufferReturnInfo = localSummit.LogCustomEvent(DateTime.Now, DateTime.Now, successLogMessage, DateTime.Now.ToString("MM_dd_yyyy hh:mm:ss tt"));
+                    counter--;
                 } while (bufferReturnInfo.RejectCode != 0 && counter > 0);
                 if (counter == 0)
                 {
@@ -1611,6 +1849,30 @@ namespace SCBS.ViewModels
                 MessageBox.Show("Error calling summit system while logging event.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             
+            return true;
+        }
+        private bool WriteEventLog(SummitSystem localSummit, string successLogMessage, string unsuccessfulMessageBoxMessage, string successLogMessageSubType)
+        {
+            int counter = 5;
+            try
+            {
+                do
+                {
+                    bufferReturnInfo = localSummit.LogCustomEvent(DateTime.Now, DateTime.Now, successLogMessage, successLogMessageSubType);
+                    counter--;
+                } while (bufferReturnInfo.RejectCode != 0 && counter > 0);
+                if (counter == 0)
+                {
+                    MessageBox.Show(unsuccessfulMessageBoxMessage, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error(e);
+                MessageBox.Show("Error calling summit system while logging event.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
             return true;
         }
         /// <summary>
@@ -1638,13 +1900,59 @@ namespace SCBS.ViewModels
             }
         }
 
-        private void ShowMessageBox(string message)
+        /// <summary>
+        /// Shows a message box to user
+        /// </summary>
+        /// <param name="message">Message to display to user</param>
+        public static void ShowMessageBox(string message)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 try
                 {
                     MessageBox.Show(Application.Current.MainWindow, message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                catch (Exception e)
+                {
+                    _log.Warn("MessageBox.Show crashed while trying to let user know about detection being on when turning sense on");
+                    _log.Error(e);
+                }
+            });
+        }
+        /// <summary>
+        /// Shows a message box to user
+        /// </summary>
+        /// <param name="message">Message to display to user</param>
+        /// <param name="title">Title of the message box</param>
+        public static void ShowMessageBox(string message, string title)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    MessageBox.Show(Application.Current.MainWindow, message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                catch (Exception e)
+                {
+                    _log.Warn("MessageBox.Show crashed while trying to let user know about detection being on when turning sense on");
+                    _log.Error(e);
+                }
+            });
+        }
+        /// <summary>
+        /// Shows a message box to user
+        /// </summary>
+        /// <param name="message">Message to display to user</param>
+        /// <param name="title">Title of the message box</param>
+        /// <param name="button">Button message</param>
+        /// <param name="image">message box image</param>
+        public static void ShowMessageBox(string message, string title, MessageBoxButton button, MessageBoxImage image)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    MessageBox.Show(Application.Current.MainWindow, message, title, button, image);
                 }
                 catch (Exception e)
                 {

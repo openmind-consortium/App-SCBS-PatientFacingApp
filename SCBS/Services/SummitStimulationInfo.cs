@@ -99,95 +99,117 @@ namespace SCBS.Services
 
         #region Gets Stim parameters based on group. This is called from outside the class
         /// <summary>
-        /// Gets the Stim parameters for Group A
+        /// Gets the Stim parameters for a Group
         /// </summary>
         /// <param name="theSummit">SummitSystem for making the api call to INS</param>
+        /// <param name="group">Group number to get the data</param>
         /// <returns>StimParameterModel that contains stim amp, stim rate and pulse width</returns>
-        public StimParameterModel GetStimParameterModelGroupA(ref SummitSystem theSummit)
+        public Tuple<bool, string, TherapyGroup> GetTherapyDataForGroup(SummitSystem theSummit, GroupNumber group)
         {
+            TherapyGroup insStateGroup = null;
             if (theSummit == null || theSummit.IsDisposed)
             {
-                return null;
+                return Tuple.Create(false, "Summit Disposed", insStateGroup);
             }
-            // Read the stimulation settings from the device
-            StimParameterModel StimParameterModel = getStimParameterModel(ref theSummit, GroupNumber.Group0);
-            _log.Info("STIM PARAMS GROUP A: pulse width = " + StimParameterModel.PulseWidth + ", stim rate = " + StimParameterModel.StimRate + ", stim amp = " + StimParameterModel.StimAmp);
-            return StimParameterModel;
-        }
-
-        /// <summary>
-        /// Gets the Stim parameters for Group B
-        /// </summary>
-        /// <param name="theSummit">SummitSystem for making the api call to INS</param>
-        /// <returns>StimParameterModel that contains stim amp, stim rate and pulse width</returns>
-        public StimParameterModel GetStimParameterModelGroupB(ref SummitSystem theSummit)
-        {
-            if (theSummit == null || theSummit.IsDisposed)
+            
+            try
             {
-                return null;
+                //Get the data from the api
+                bufferInfo = theSummit.ReadStimGroup(group, out insStateGroup);
+                if (bufferInfo.RejectCode != 0 || insStateGroup == null)
+                {
+                    _log.Warn("Could not read stim group from Medtronic api call");
+                    return Tuple.Create(false, "Could not read stim group from Medtronic api call", insStateGroup);
+                }
             }
-            // Read the stimulation settings from the device
-            StimParameterModel StimParameterModel = getStimParameterModel(ref theSummit, GroupNumber.Group1);
-            _log.Info("STIM PARAMS GROUP B: pulse width = " + StimParameterModel.PulseWidth + ", stim rate = " + StimParameterModel.StimRate + ", stim amp = " + StimParameterModel.StimAmp);
-            return StimParameterModel;
-        }
-
-        /// <summary>
-        /// Gets the Stim parameters for Group C
-        /// </summary>
-        /// <param name="theSummit">SummitSystem for making the api call to INS</param>
-        /// <returns>StimParameterModel that contains stim amp, stim rate and pulse width</returns>
-        public StimParameterModel GetStimParameterModelGroupC(ref SummitSystem theSummit)
-        {
-            if (theSummit == null || theSummit.IsDisposed)
+            catch (Exception e)
             {
-                return null;
+                _log.Error(e);
+                return Tuple.Create(false, "Error reading stim group.", insStateGroup);
             }
-            // Read the stimulation settings from the device
-            StimParameterModel StimParameterModel = getStimParameterModel(ref theSummit, GroupNumber.Group2);
-            _log.Info("STIM PARAMS GROUP C: pulse width = " + StimParameterModel.PulseWidth + ", stim rate = " + StimParameterModel.StimRate + ", stim amp = " + StimParameterModel.StimAmp);
-            return StimParameterModel;
-        }
-
-        /// <summary>
-        /// Gets the Stim parameters for Group D
-        /// </summary>
-        /// <param name="theSummit">SummitSystem for making the api call to INS</param>
-        /// <returns>StimParameterModel that contains stim amp, stim rate and pulse width</returns>
-        public StimParameterModel GetStimParameterModelGroupD(ref SummitSystem theSummit)
-        {
-            if (theSummit == null || theSummit.IsDisposed)
-            {
-                return null;
-            }
-            // Read the stimulation settings from the device
-            StimParameterModel StimParameterModel = getStimParameterModel(ref theSummit, GroupNumber.Group3);
-            _log.Info("STIM PARAMS GROUP D: pulse width = " + StimParameterModel.PulseWidth + ", stim rate = " + StimParameterModel.StimRate + ", stim amp = " + StimParameterModel.StimAmp);
-            return StimParameterModel;
+            return Tuple.Create(true, "Success", insStateGroup);
         }
         #endregion
 
         #region Helper Functions for Converting Group Format and Getting Stim Parameters from API
+        /// <summary>
+        /// This maybe should go into a different class like Stimulation.cs, but it's here for now. 
+        ///It gets the group stim params based on the group that was read from the device.
+        ///if Group b was read from the device, then it gets the params for that specific group.
+        /// </summary>
+        /// <param name="theSummit">Summit System</param>
+        /// <param name="group">Active Group after being converted: Group A, Group B, Group C, Group D</param>
+        /// <param name="program">program 0-3</param>
+        /// <returns>StimParameterModel filled with data</returns>
+        public StimParameterModel GetStimParamsBasedOnGroup(SummitSystem theSummit, string group, int program)
+        {
+            StimParameterModel stimParam = new StimParameterModel("Error", "Error", "Error", "Error", null);
+
+            if (string.IsNullOrEmpty(group))
+            {
+                return stimParam;
+            }
+            switch (group)
+            {
+                case "Group A":
+                    stimParam = GetStimParameterModel(theSummit, GroupNumber.Group0, program);
+                    break;
+                case "Group B":
+                    stimParam = GetStimParameterModel(theSummit, GroupNumber.Group1, program);
+                    break;
+                case "Group C":
+                    stimParam = GetStimParameterModel(theSummit, GroupNumber.Group2, program);
+                    break;
+                case "Group D":
+                    stimParam = GetStimParameterModel(theSummit, GroupNumber.Group3, program);
+                    break;
+                default:
+                    break;
+            }
+            return stimParam;
+        }
         /// <summary>
         /// Gets the stim parameters based on group from the actual API
         /// </summary>
         /// <param name="theSummit">SummitSystem for making the API call to INS</param>
         /// <param name="groupNumber">Group number corresponding to which group we want to get stim parameters from such as Group0, Group1, etc</param>
         /// <returns>StimParameterModel that contains stim amp, stim rate and pulse width</returns>
-        private StimParameterModel getStimParameterModel(ref SummitSystem theSummit, GroupNumber groupNumber)
+        private StimParameterModel GetStimParameterModel(SummitSystem theSummit, GroupNumber groupNumber, int program)
         {
             if (theSummit == null || theSummit.IsDisposed)
             {
                 return null;
             }
             TherapyGroup insStateGroup = null;
+            AmplitudeLimits ampLimits = null;
             try
             {
-                //Get the data from the api
-                bufferInfo = theSummit.ReadStimGroup(groupNumber, out insStateGroup);
-                if(bufferInfo.RejectCode != 0)
+                int counter = 5;
+                do
+                {
+                    bufferInfo = theSummit.ReadStimGroup(groupNumber, out insStateGroup);
+                    counter--;
+                } while ((insStateGroup == null || bufferInfo.RejectCode != 0) && counter > 0);
+                if (bufferInfo.RejectCode != 0 && counter == 0)
                 {
                     _log.Warn("Could not read stim group from Medtronic api call");
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error(e);
+            }
+            try
+            {
+                int counter = 5;
+                do
+                {
+                    bufferInfo = theSummit.ReadStimAmplitudeLimits(groupNumber, out ampLimits);
+                    counter--;
+                } while ((insStateGroup == null || bufferInfo.RejectCode != 0) && counter > 0);
+                if (bufferInfo.RejectCode != 0 && counter == 0)
+                {
+                    _log.Warn("Could not read amp limits from Medtronic api call");
                 }
             }
             catch (Exception e)
@@ -199,11 +221,11 @@ namespace SCBS.Services
                 //parse the data to get the pulsewidth
                 if (insStateGroup != null)
                 {
-                    pulseWidth = insStateGroup.Programs[0].PulseWidthInMicroseconds.ToString() + " μS";
-                    stimRate = insStateGroup.RateInHz.ToString() + " Hz";
-                    stimAmp = insStateGroup.Programs[0].AmplitudeInMilliamps.ToString() + " mA";
-                    stimElectrode = FindStimElectrodes(insStateGroup);
-                    electrodes = insStateGroup?.Programs[0]?.Electrodes;
+                    pulseWidth = insStateGroup.Programs[program].PulseWidthInMicroseconds.ToString();
+                    stimRate = insStateGroup.RateInHz.ToString();
+                    stimAmp = insStateGroup.Programs[program].AmplitudeInMilliamps.ToString();
+                    stimElectrode = FindStimElectrodes(insStateGroup, program);
+                    electrodes = insStateGroup?.Programs[program]?.Electrodes;
                 }   
             }
             catch (Exception e)
@@ -211,7 +233,7 @@ namespace SCBS.Services
                 _log.Error(e);
             }
             //Set the Model with these values and return model
-            StimParameterModel StimParameterModel = new StimParameterModel(pulseWidth, stimRate, stimAmp, stimElectrode, electrodes);
+            StimParameterModel StimParameterModel = new StimParameterModel(pulseWidth, stimRate, stimAmp, stimElectrode, electrodes, insStateGroup, ampLimits);
             return StimParameterModel;
         }
 
@@ -219,21 +241,30 @@ namespace SCBS.Services
         /// Finds the electrodes that are stimming
         /// </summary>
         /// <param name="therapyGroup">therapy group from the ins call</param>
+        /// <param name="program">program number 0-3</param>
         /// <returns>Returns the contacts that are stimming along with anode or cathode</returns>
-        private string FindStimElectrodes(TherapyGroup therapyGroup)
+        public string FindStimElectrodes(TherapyGroup therapyGroup, int program)
         {
             string electrodesStimming = "";
             if (therapyGroup.Valid)
             {
-                if (therapyGroup.Programs[0].Valid)
+                if (therapyGroup.Programs[program].Valid)
                 {
                     for (int i = 0; i < 17; i++)
                     {
-                        if (!therapyGroup.Programs[0].Electrodes[i].IsOff)
+                        if (!therapyGroup.Programs[program].Electrodes[i].IsOff)
                         {
-                            electrodesStimming += i.ToString();
+                            //Case is 16 so it gets a C. Otherwise give the number
+                            if (i == 16)
+                            {
+                                electrodesStimming += "C";
+                            }
+                            else
+                            {
+                                electrodesStimming += i.ToString();
+                            }
                             // What type of electrode is it?
-                            switch (therapyGroup.Programs[0].Electrodes[i].ElectrodeType)
+                            switch (therapyGroup.Programs[program].Electrodes[i].ElectrodeType)
                             {
                                 case ElectrodeTypes.Cathode:
                                     electrodesStimming += "-";
@@ -284,40 +315,5 @@ namespace SCBS.Services
             return tempGroup;
         }
         #endregion
-
-        /// <summary>
-        /// This maybe should go into a different class like Stimulation.cs, but it's here for now. 
-        ///It gets the group stim params based on the group that was read from the device.
-        ///if Group b was read from the device, then it gets the params for that specific group.
-        /// </summary>
-        /// <param name="theSummit">Summit System</param>
-        /// <param name="group">Active Group after being converted: Group A, Group B, Group C, Group D</param>
-        /// <returns>StimParameterModel filled with data</returns>
-        public StimParameterModel GetStimParamsBasedOnGroup(SummitSystem theSummit, string group)
-        {
-            StimParameterModel stimParam = new StimParameterModel("", "", "", "", null);
-            if (string.IsNullOrEmpty(group))
-            {
-                return stimParam;
-            }
-            switch (group)
-            {
-                case "Group A":
-                    stimParam = GetStimParameterModelGroupA(ref theSummit);
-                    break;
-                case "Group B":
-                    stimParam = GetStimParameterModelGroupB(ref theSummit);
-                    break;
-                case "Group C":
-                    stimParam = GetStimParameterModelGroupC(ref theSummit);
-                    break;
-                case "Group D":
-                    stimParam = GetStimParameterModelGroupD(ref theSummit);
-                    break;
-                default:
-                    break;
-            }
-            return stimParam;
-        }
     }
 }

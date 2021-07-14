@@ -58,6 +58,10 @@ namespace SCBS.Services
         /// <returns>Device ID or null if couldn't find it</returns>
         public string GetDeviceID(SummitSystem theSummit)
         {
+            if (theSummit == null || theSummit.IsDisposed)
+            {
+                _log.Warn("Summit null or disposed when trying to get subject id");
+            }
             _log.Info("Getting Device ID");
             string deviceID = null;
             int counter = 10;
@@ -109,11 +113,12 @@ namespace SCBS.Services
                     //do nothing. Just keep looping until we actually get the patient id
                     _log.Error(e);
                 }
-                counter--;
                 if(counter < 10)
                 {
-                    Thread.Sleep(400);
+                    Thread.Sleep(300);
                 }
+                _log.Info("Attempt to get subject info: " + (10 - counter));
+                counter--;                
             }
             if(subjectInfo == null && counter == 0)
             {

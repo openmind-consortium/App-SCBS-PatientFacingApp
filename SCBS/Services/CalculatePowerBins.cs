@@ -198,7 +198,7 @@ namespace SCBS.Services
         /// <param name="fftSize">Size of the FFT.</param>
         /// <param name="timeRate">The time rate.</param>
         /// <returns>a list of fft bin boundaries</returns>
-        private void CalculateFFTBins(FftSizes fftSize, TdSampleRates timeRate)
+        public List<double> CalculateFFTBins(FftSizes fftSize, TdSampleRates timeRate)
         {
             int numBins = 0;
             switch (fftSize)
@@ -239,6 +239,7 @@ namespace SCBS.Services
             {
                 bins.Add(i * binWidth);
             }
+            return bins;
         }
         /// <summary>
         /// Checks to make sure upper power band is greater than lower power band index

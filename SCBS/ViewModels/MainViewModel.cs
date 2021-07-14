@@ -16,6 +16,9 @@ using Medtronic.NeuroStim.Olympus.DataTypes.DeviceManagement;
 using System.Windows.Threading;
 using System.Diagnostics;
 using NAudio.Wave;
+using System.Reflection;
+using Medtronic.NeuroStim.Olympus.DataTypes.Core.DataManagement;
+using log4net.Config;
 
 namespace SCBS.ViewModels
 {
@@ -24,9 +27,9 @@ namespace SCBS.ViewModels
     /// </summary>
     public partial class MainViewModel : Screen
     {
-        #region Variables
+        #region MainView Variables
         //logger
-        private static readonly ILog _log = LogManager.GetLog(typeof(MainViewModel));
+        private static ILog _log = LogManager.GetLog(typeof(MainViewModel));
         //location of sense files
         private static readonly string senseLeftFileLocation = @"C:\SCBS\senseLeft_config.json";
         private static readonly string senseRightFileLocation = @"C:\SCBS\senseRight_config.json";
@@ -34,8 +37,9 @@ namespace SCBS.ViewModels
         private static readonly string PROJECT_ID = "SummitContinuousBilateralStreaming";
         private static Thread workerThreadLeft;
         private static Thread workerThreadRight;
-        private static Thread startThread;
         private static Thread alignThread;
+        private static Thread downloadLogThreadLeftUni;
+        private static Thread downloadLogThreadRight;
         //Variable to stop worker thread when window is closing. Cleaner than just aborting thread, but aborting happens anyway
         private static volatile bool _shouldStopWorkerThread = false;
         private volatile static SummitManager theSummitManager = null;
@@ -50,15 +54,32 @@ namespace SCBS.ViewModels
         private bool currentOnFlag = false;
         private int beepLogCounterForText = 5;
         //UI variables
-        private static bool canConnect = true;
+        private static bool CanConnect = true;
+        private static bool connectButtonEnabled = true;
+        private static bool alignButtonEnabled = false;
         private static bool isBilateral = false;
         private static bool _isSwitchVisible = false;
         private static bool _isAlignVisible = false;
-        private static bool _stimDataVisible = true;
+        //stim display settings
+        private string _applicationTitleText;
+        private WindowStyle _windowStyleForMainWindow = WindowStyle.None;
+        private static bool _visibilityStimGroupLeftUni = true;
+        private static bool _visibilityStimAmpLeftUni = true;
+        private static bool _visibilityStimRateLeftUni = true;
+        private static bool _visibilityStimContactsLeftUni = true;
+        private static bool _visibilityStimTherapyOnOffLeftUni = true;
+        private static bool _visibilityStimAdaptiveOnLeftUni = true;
+        private static bool _visibilityStimGroupRight = true;
+        private static bool _visibilityStimAmpRight = true;
+        private static bool _visibilityStimRateRight = true;
+        private static bool _visibilityStimContactsRight = true;
+        private static bool _visibilityStimTherapyOnOffRight = true;
+        private static bool _visibilityStimAdaptiveOnRight = true;
         private static bool _isSpinnerVisible = false;
         private static bool _reportButtonVisible = false;
         private string _connectButtonText;
-        private Brush _connectButtonColor;
+        private string _downloadLogButtonText;
+        private Brush _connectButtonColor, _stimStateLeftTextColor, _stimStateRightTextColor;
         private Brush _borderCTMLeftBackground;
         private Brush _borderCTMRightBackground;
         private Brush _borderINSLeftBackground;
@@ -90,19 +111,27 @@ namespace SCBS.ViewModels
         private string _laptopBatteryLevel = "";
         private int _currentProgress = 0;
         private Visibility _progressVisibility = Visibility.Collapsed;
+        private Visibility _tabVisibility = Visibility.Collapsed;
         private string _progressText = "";
-        private bool _webPageOneButtonEnabled, _webPageTwoButtonEnabled, _montageButtonEnabled, _stimSweepButtonEnabled, _newSessionButtonEnabled, _moveGroupButtonEnabled;
+        private bool _webPageOneButtonEnabled, _webPageTwoButtonEnabled, _montageButtonEnabled, _stimSweepButtonEnabled, _newSessionButtonEnabled, _moveGroupButtonEnabled, _downloadLogButtonVisible;
         private string _webPageOneButtonText = "";
         private string _webPageTwoButtonText = "";
         private string _moveGroupButtonText = "";
         private string _beepLoggedRight, _beepLoggedLeft;
+        private string versionNumber = "";
+        private volatile bool alignSuccessShown = false;
+        private volatile bool rightLogDownloadFinished = false; 
+        private volatile bool leftLogDownloadFinished = false;
         #endregion
+        #region ResearcherToolsViewModel Variables
 
+        #endregion
         /// <summary>
         /// Constructor
         /// </summary>
         public MainViewModel()
         {
+            #region MainViewModel Constructor
             jSONService = new JSONService(_log);
             summitSensing = new SummitSensing(_log);
             stimInfoRight = new SummitStimulationInfo(_log);
@@ -115,17 +144,24 @@ namespace SCBS.ViewModels
                 return;
             }
 
+            if (appConfigModel.BasePathToJSONFiles != null && Directory.Exists(appConfigModel.BasePathToJSONFiles))
+            {
+                log4net.GlobalContext.Properties["LogFileName"] = appConfigModel.BasePathToJSONFiles; //log file path 
+            }
+            else
+            {
+                log4net.GlobalContext.Properties["LogFileName"] = "C:\\SCBS\\"; //log file path 
+            }
+            
+            log4net.Config.XmlConfigurator.Configure();
+
             //Load the left_default sense config file. This will always load even in unilateral case
             senseLeftConfigModel = jSONService?.GetSenseModelFromFile(senseLeftFileLocation);
             if (senseLeftConfigModel == null)
             {
                 return;
             }
-            //Check to see if the sense setup is going to have major packet loss due to too much data over bandwidth.
-            if (!CheckPacketLoss(senseLeftConfigModel))
-            {
-                ShowMessageBox("ERROR in Left/Default - Either packet loss over maximum or config file incorrect.  Please check before proceeding.");
-            }
+            
 
             //If bilateral, show right side data on UI and load right side config file
             if (appConfigModel.Bilateral)
@@ -141,18 +177,12 @@ namespace SCBS.ViewModels
                 {
                     return;
                 }
-                //Check to see if the sense setup is going to have major packet loss due to too much data over bandwidth.
-                if (!CheckPacketLoss(senseRightConfigModel))
-                {
-                    ShowMessageBox("ERROR in Right/Bilateral - Either packet loss over maximum or config file incorrect.  Please check before proceeding.");
-                }
             }
 
             //Show switch button and hide stim data such as amp and frequency. This is so patient doesn't know what amp or hz they are at
             if (appConfigModel.Switch)
             {
                 IsSwitchVisible = true;
-                StimDataVisible = false;
             }
 
             //Show the align button
@@ -201,13 +231,22 @@ namespace SCBS.ViewModels
                     WebPageTwoButtonText = appConfigModel.WebPageButtons?.WebPageTwoButtonText;
                 }
             }
-
+            //move group button
             if(appConfigModel.MoveGroupButton != null)
             {
                 if (appConfigModel.MoveGroupButton.MoveGroupButtonEnabled)
                 {
                     MoveGroupButtonEnabled = true;
                     MoveGroupButtonText = appConfigModel.MoveGroupButton.MoveGroupButtonText;
+                }
+            }
+            //mirror, event and app log download button
+            if (appConfigModel.LogDownloadButton != null)
+            {
+                if (appConfigModel.LogDownloadButton.LogDownloadButtonEnabled)
+                {
+                    DownloadLogButtonVisible = true;
+                    DownloadLogButtonText = appConfigModel.LogDownloadButton.LogDownloadButtonText;
                 }
             }
 
@@ -229,19 +268,260 @@ namespace SCBS.ViewModels
                 }
             }
 
+            if (appConfigModel.StimDisplaySettings != null)
+            {
+                if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings != null)
+                {
+                    if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings.HideGroup)
+                    {
+                        VisibilityStimGroupLeftUni = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings.HideAmp)
+                    {
+                        VisibilityStimAmpLeftUni = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings.HideRate)
+                    {
+                        VisibilityStimRateLeftUni = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings.HideStimContacts)
+                    {
+                        VisibilityStimContactsLeftUni = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings.HideTherapyOnOff)
+                    {
+                        VisibilityStimTherapyOnOffLeftUni = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.LeftUnilateralSettings.HideAdaptiveOn)
+                    {
+                        VisibilityStimAdaptiveOnLeftUni = false;
+                    }
+                }
+                if (appConfigModel.StimDisplaySettings.RightSettings != null)
+                {
+                    if (appConfigModel.StimDisplaySettings.RightSettings.HideGroup)
+                    {
+                        VisibilityStimGroupRight = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.RightSettings.HideAmp)
+                    {
+                        VisibilityStimAmpRight = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.RightSettings.HideRate)
+                    {
+                        VisibilityStimRateRight = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.RightSettings.HideStimContacts)
+                    {
+                        VisibilityStimContactsRight = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.RightSettings.HideTherapyOnOff)
+                    {
+                        VisibilityStimTherapyOnOffRight = false;
+                    }
+                    if (appConfigModel.StimDisplaySettings.RightSettings.HideAdaptiveOn)
+                    {
+                        VisibilityStimAdaptiveOnRight = false;
+                    }
+                }
+                if (appConfigModel.TurnOnResearcherTools)
+                {
+                    TabVisibility = Visibility.Visible;
+                    WindowStyleForMainWindow = WindowStyle.ThreeDBorderWindow;
+                }
+            }
+
             //Setup Stop watch to show user how long they are streaming for.
             dispatcherTimerLeft.Tick += new EventHandler(dt_TickLeft);
             dispatcherTimerLeft.Interval = new TimeSpan(0, 0, 0, 1);
             dispatcherTimerRight.Tick += new EventHandler(dt_TickRight);
             dispatcherTimerRight.Interval = new TimeSpan(0, 0, 0, 1);
+
+            //version number
+            Assembly assem = Assembly.GetExecutingAssembly();
+            AssemblyName assemName = assem.GetName();
+            Version ver = assemName.Version;
+            versionNumber = "SCBS Version number: " + ver;
+
+            //Application name and version
+            ApplicationTitleText = "Summit Continuous Bilateral Streaming (SCBS) Application. Version " + ver;
+            #endregion
+
+            #region ResearcherTools Constructor
+            ProgramOptionsLeft.Add(program0Option);
+            ProgramOptionsLeft.Add(program1Option);
+            ProgramOptionsLeft.Add(program2Option);
+            ProgramOptionsLeft.Add(program3Option);
+            SelectedProgramLeft = program0Option;
+            ProgramOptionsRight.Add(program0Option);
+            ProgramOptionsRight.Add(program1Option);
+            ProgramOptionsRight.Add(program2Option);
+            ProgramOptionsRight.Add(program3Option);
+            SelectedProgramRight = program0Option;
+
+            DeviceOptions.Add(leftUnilateralDeviceOption);
+            SelectedDevice = leftUnilateralDeviceOption;
+            if (isBilateral)
+            {
+                DeviceOptions.Add(rightDeviceOption);
+                DeviceOptions.Add(bothDeviceOption);
+            }
+            dispatcherChangeTimer.Tick += new EventHandler(AmpChangeTimer);
+            dispatcherChangeTimer.Interval = new TimeSpan(0, 0, 0, 1);
+            #endregion
         }
 
+
         #region Button Clicks
+        /// <summary>
+        /// Downloads the mirror and application log files
+        /// </summary>
+        public void DownloadLogButtonClick()
+        {
+            //Check if connected
+            if (CanConnect)
+            {
+                return;
+            }
+            //Run new thread!!!
+            ProgressVisibility = Visibility.Visible;
+            CurrentProgress = 0;
+            ProgressText = "Downloading Logs...";
+            if (!IsBilateral && theSummitLeft != null && !theSummitLeft.IsDisposed)
+            {
+                rightLogDownloadFinished = true;
+                leftLogDownloadFinished = false;
+                downloadLogThreadLeftUni = new Thread(new ThreadStart(DownloadLogThreadCodeLeftUnilateral));
+                downloadLogThreadLeftUni.IsBackground = true;
+                downloadLogThreadLeftUni.Start();
+            }
+            else if (IsBilateral && theSummitLeft != null && !theSummitLeft.IsDisposed && theSummitRight != null && !theSummitRight.IsDisposed)
+            {
+                if (!CanConnect)
+                {
+                    rightLogDownloadFinished = false;
+                    leftLogDownloadFinished = false;
+                    downloadLogThreadLeftUni = new Thread(new ThreadStart(DownloadLogThreadCodeLeftUnilateral));
+                    downloadLogThreadLeftUni.IsBackground = true;
+                    downloadLogThreadLeftUni.Start();
+                    downloadLogThreadRight = new Thread(new ThreadStart(DownloadLogThreadCodeRight));
+                    downloadLogThreadRight.IsBackground = true;
+                    downloadLogThreadRight.Start();
+                }
+            }
+            else
+            {
+                ProgressVisibility = Visibility.Hidden;
+            }
+            
+        }
+        private void DownloadLogThreadCodeLeftUnilateral()
+        {
+            string logPathLeftUni = "";
+            //Create filepath for left or unilateral
+            logPathLeftUni = GetDirectoryPathForCurrentSession(theSummitLeft, PROJECT_ID, leftPatientID, leftDeviceID);
+            logPathLeftUni += @"\LogDataFromLeftUnilateralINS\";
+            //Get app log data
+            if (appConfigModel.LogDownloadButton != null && appConfigModel.LogDownloadButton.LogTypesToDownload != null)
+            {
+                CurrentProgress = 15;
+                if (appConfigModel.LogDownloadButton.LogTypesToDownload.ApplicationLog)
+                {
+                    if(!GetApplicationLogInfo(theSummitLeft, logPathLeftUni, FlashLogTypes.Application, "AppLog"))
+                    {
+                        MessageBox.Show("Could not Log Application Data. Please retry. If the problem persists, please power off your ctm and power back on and try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                        while (!rightLogDownloadFinished)
+                        {
+                            Thread.Sleep(300);
+                        }
+                        ProgressVisibility = Visibility.Hidden;
+                        return;
+                    }
+                }
+                CurrentProgress = 60;
+                if (appConfigModel.LogDownloadButton.LogTypesToDownload.EventLog)
+                {
+                    if(!GetApplicationLogInfo(theSummitLeft, logPathLeftUni, FlashLogTypes.Event, "EventLog"))
+                    {
+                        MessageBox.Show("Could not Log Event Data. Please retry. If the problem persists, please power off your ctm and power back on and try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                        while (!rightLogDownloadFinished)
+                        {
+                            Thread.Sleep(300);
+                        }
+                        ProgressVisibility = Visibility.Hidden;
+                        return;
+                    }
+                }
+                CurrentProgress = 80;
+                if (appConfigModel.LogDownloadButton.LogTypesToDownload.MirrorLog)
+                {
+                    if(!GetApplicationMirrorData(theSummitLeft, logPathLeftUni, appConfigModel))
+                    {
+                        MessageBox.Show("Could not Log Mirror Data. Please retry. If the problem persists, please power off your ctm and power back on and try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                        while (!rightLogDownloadFinished)
+                        {
+                            Thread.Sleep(300);
+                        }
+                        ProgressVisibility = Visibility.Hidden;
+                        return;
+                    }
+                }
+                CurrentProgress = 100;
+            }
+            while (!rightLogDownloadFinished)
+            {
+                Thread.Sleep(300);
+            }
+            ProgressVisibility = Visibility.Hidden;
+        }
+        private void DownloadLogThreadCodeRight()
+        {
+            if (!IsBilateral)
+            {
+                return;
+            }
+            string logPathRight = "";
+            //Create filepath for right
+            logPathRight = GetDirectoryPathForCurrentSession(theSummitRight, PROJECT_ID, rightPatientID, rightDeviceID);
+            logPathRight += @"\LogDataFromRightINS\";
+            //Get app log data
+            if (appConfigModel.LogDownloadButton != null && appConfigModel.LogDownloadButton.LogTypesToDownload != null)
+            {
+                if (appConfigModel.LogDownloadButton.LogTypesToDownload.ApplicationLog)
+                {
+                    if(!GetApplicationLogInfo(theSummitRight, logPathRight, FlashLogTypes.Application, "AppLog"))
+                    {
+                        MessageBox.Show("Could not Log Application Data. Please retry. If the problem persists, please power off your ctm and power back on and try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                        rightLogDownloadFinished = true;
+                        return;
+                    }
+                }
+                if (appConfigModel.LogDownloadButton.LogTypesToDownload.EventLog)
+                {
+                    if(!GetApplicationLogInfo(theSummitRight, logPathRight, FlashLogTypes.Event, "EventLog"))
+                    {
+                        MessageBox.Show("Could not Log Event Data. Please retry. If the problem persists, please power off your ctm and power back on and try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                        rightLogDownloadFinished = true;
+                        return;
+                    }
+                }
+                if (appConfigModel.LogDownloadButton.LogTypesToDownload.MirrorLog)
+                {
+                    if(!GetApplicationMirrorData(theSummitRight, logPathRight, appConfigModel))
+                    {
+                        MessageBox.Show("Could not Log Mirror Data. Please retry. If the problem persists, please power off your ctm and power back on and try again.", "Warning", MessageBoxButton.OK, MessageBoxImage.Information);
+                        rightLogDownloadFinished = true;
+                        return;
+                    }
+                }
+            }
+            rightLogDownloadFinished = true;
+        }
         /// <summary>
         /// Starts up the stim sweep window.
         /// </summary>
         /// <returns></returns>
-        public void StimSweepButtonClick()
+        public async Task StimSweepButtonClick()
         {
             WindowManager window = new WindowManager();
             //window.ShowDialog(new StimSweepViewModel(theSummitLeft, theSummitRight, IsBilateral, senseLeftConfigModel, senseRightConfigModel, _log, appConfigModel), null, null);
@@ -256,8 +536,8 @@ namespace SCBS.ViewModels
                             if (!theSummitRight.IsDisposed)
                             {
                                 window.ShowDialog(new StimSweepViewModel(theSummitLeft, theSummitRight, IsBilateral, senseLeftConfigModel, senseRightConfigModel, _log, appConfigModel), null, null);
-                                UpdateStimStatusGroupLeft();
-                                UpdateStimStatusGroupRight();
+                                Task.Run(()=> UpdateStimStatusGroupLeft());
+                                Task.Run(() => UpdateStimStatusGroupRight());
                                 SensingState state;
                                 //This checks to see if sensing is already enabled. This can happen if adaptive is already running and we don't need to configure it. 
                                 //If it is, then skip setting up sensing
@@ -619,7 +899,11 @@ namespace SCBS.ViewModels
         /// </summary>
         private void AlignThreadCode()
         {
-            IsSpinnerVisible = true;
+            ProgressVisibility = Visibility.Visible;
+            CurrentProgress = 5;
+            ProgressText = "Running Align...";
+            AlignButtonEnabled = false;
+            alignSuccessShown = false;
             int counter = 5;
             if (IsBilateral)
             {
@@ -632,7 +916,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -643,19 +927,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group B";
-
+                    CurrentProgress = 8;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -663,7 +947,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -674,19 +958,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group B";
-
+                    CurrentProgress = 16;
                     //Turn stim off
                     try
                     {
@@ -694,53 +978,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 24;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 32;
                     //Turn stim on
                     try
                     {
@@ -748,53 +1032,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 40;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(4000);
-
+                    CurrentProgress = 48;
                     //Turn stim off
                     try
                     {
@@ -802,53 +1086,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 56;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 64;
                     //Turn stim on
                     try
                     {
@@ -856,53 +1140,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 72;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(2000);
-
+                    CurrentProgress = 80;
                     //Change to group A
                     try
                     {
@@ -911,7 +1195,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -922,19 +1206,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group A";
-
+                    CurrentProgress = 88;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -942,7 +1226,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -953,18 +1237,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group A";
+                    CurrentProgress = 100;
                 }
                 else if (StimStateLeft.Equals("TherapyOff") && StimStateRight.Equals("TherapyOff"))
                 {
@@ -976,7 +1261,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -987,19 +1272,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group B";
-
+                    CurrentProgress = 8;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -1007,7 +1292,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -1018,19 +1303,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group B";
-
+                    CurrentProgress = 16;
                     //Turn stim on
                     try
                     {
@@ -1038,53 +1323,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 24;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 32;
                     //Turn stim off
                     try
                     {
@@ -1092,53 +1377,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 40;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(4000);
-
+                    CurrentProgress = 48;
                     //Turn stim on
                     try
                     {
@@ -1146,53 +1431,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 56;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 64;
                     //Turn stim off
                     try
                     {
@@ -1200,53 +1485,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 72;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(2000);
-
+                    CurrentProgress = 80;
                     //Change to group A
                     try
                     {
@@ -1255,7 +1540,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -1266,19 +1551,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group A";
-
+                    CurrentProgress = 88;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -1286,7 +1571,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -1297,18 +1582,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group A";
+                    CurrentProgress = 100;
                 }
                 else if (StimStateLeft.Equals("TherapyActive") && StimStateRight.Equals("TherapyOff"))
                 {
@@ -1320,7 +1606,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -1331,19 +1617,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group B";
-
+                    CurrentProgress = 8;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -1351,7 +1637,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -1362,19 +1648,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group B";
-
+                    CurrentProgress = 16;
                     //Change stim
                     try
                     {
@@ -1382,212 +1668,212 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 24;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 32;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 40;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(4000);
-
+                    CurrentProgress = 48;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 56;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 64;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 72;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(2000);
-
+                    CurrentProgress = 80;
                     //Change to group A
                     try
                     {
@@ -1596,7 +1882,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -1607,19 +1893,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group A";
-
+                    CurrentProgress = 88;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -1627,7 +1913,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -1638,18 +1924,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group A";
+                    CurrentProgress = 100;
                 }
                 else if (StimStateLeft.Equals("TherapyOff") && StimStateRight.Equals("TherapyActive"))
                 {
@@ -1661,7 +1948,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -1672,19 +1959,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group B";
-
+                    CurrentProgress = 8;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -1692,7 +1979,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -1703,178 +1990,178 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group B";
-
+                    CurrentProgress = 16;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 24;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 32;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 40;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(4000);
-
+                    CurrentProgress = 48;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
-
+                    CurrentProgress = 56;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyOff";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 64;
                     //Turn stim on
                     try
                     {
@@ -1882,53 +2169,53 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
-
+                    CurrentProgress = 72;
                     try
                     {
                         counter = 5;
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateRight = "TherapyActive";
                     Thread.Sleep(2000);
-
+                    CurrentProgress = 80;
                     //Change to group A
                     try
                     {
@@ -1937,7 +2224,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -1948,19 +2235,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group A";
-
+                    CurrentProgress = 88;
                     try
                     {
                         summitSensing.StopStreaming(theSummitRight, false);
@@ -1968,7 +2255,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupRight();
@@ -1979,25 +2266,32 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupRight();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupRight = "Group A";
+                    CurrentProgress = 100;
                 }
                 else
                 {
                     MessageBox.Show("Could not read therapy status. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward..", "ERROR", MessageBoxButton.OK, MessageBoxImage.Error);
-                    IsSpinnerVisible = false;
-                    return;
+                    ProgressVisibility = Visibility.Hidden;
+                    AlignButtonEnabled = true; return;
                 }
+                if (alignSuccessShown)
+                {
+                    ShowMessageBox("Align Finished Successfully", "Success!", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+                    AlignButtonEnabled = true;
+                }
+                alignSuccessShown = true;
             }
             else
             {
@@ -2011,7 +2305,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -2022,19 +2316,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to Group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group B";
-
+                    CurrentProgress = 15;
                     //Turn stim off
                     try
                     {
@@ -2042,25 +2336,25 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
-                        return;
+                        ProgressVisibility = Visibility.Hidden;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
-                        return;
+                        ProgressVisibility = Visibility.Hidden;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 30;
                     //Turn stim on
                     try
                     {
@@ -2068,27 +2362,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
                     Thread.Sleep(4000);
-
+                    CurrentProgress = 45;
                     //Turn stim off
                     try
                     {
@@ -2096,27 +2390,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 65;
                     //Turn stim on
                     try
                     {
@@ -2124,27 +2418,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
                     Thread.Sleep(2000);
-
+                    CurrentProgress = 85;
                     //Change to group A
                     try
                     {
@@ -2153,7 +2447,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -2164,18 +2458,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group A";
+                    CurrentProgress = 100;
                 }
                 else if (StimStateLeft.Equals("TherapyOff"))
                 {
@@ -2187,7 +2482,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group1);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -2198,19 +2493,19 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group B. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group B";
-
+                    CurrentProgress = 15;
                     //Turn stim on
                     try
                     {
@@ -2218,27 +2513,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn(); 
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 30;
                     //Turn stim off
                     try
                     {
@@ -2246,27 +2541,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
                     Thread.Sleep(4000);
-
+                    CurrentProgress = 45;
                     //Turn stim on
                     try
                     {
@@ -2274,27 +2569,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy on. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyActive";
                     Thread.Sleep(3000);
-
+                    CurrentProgress = 65;
                     //Turn stim off
                     try
                     {
@@ -2302,27 +2597,27 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                     }
                     catch (Exception e)
                     {
                         _log.Error(e);
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error turning stim therapy off. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     StimStateLeft = "TherapyOff";
                     Thread.Sleep(2000);
-
+                    CurrentProgress = 85;
                     //Change to group A
                     try
                     {
@@ -2331,7 +2626,7 @@ namespace SCBS.ViewModels
                         do
                         {
                             bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group0);
-                            counter--;
+                            counter--; Thread.Sleep(500);
                         } while (bufferReturnInfo.RejectCode != 0 && counter > 5);
                         Thread.Sleep(300);
                         UpdateStimStatusGroupLeft();
@@ -2342,21 +2637,24 @@ namespace SCBS.ViewModels
                     {
                         _log.Error(e);
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     if (!CheckReturnCodeForClinician(bufferReturnInfo) || counter == 0)
                     {
                         ShowMessageBox("Error moving to group A. Please try again. Settings may not be in original state. Be sure to correct settings before moving forward.");
-                        IsSpinnerVisible = false;
+                        ProgressVisibility = Visibility.Hidden;
                         UpdateStimStatusGroupLeft();
-                        return;
+                        AlignButtonEnabled = true; return;
                     }
                     ActiveGroupLeft = "Group A";
+                    CurrentProgress = 100;
                 }
             }
-            IsSpinnerVisible = false;
+            AlignButtonEnabled = true;
+            ProgressVisibility = Visibility.Hidden;
+            ShowMessageBox("Align Finished Successfully", "Success!", MessageBoxButton.OK, MessageBoxImage.Asterisk);
         }
 
         /// <summary>
@@ -2385,16 +2683,33 @@ namespace SCBS.ViewModels
         /// </summary>
         public void ConnectButtonClick()
         {
+            //Check to see if the sense setup is going to have major packet loss due to too much data over bandwidth.
+            if (!CheckPacketLoss(senseLeftConfigModel))
+            {
+                ShowMessageBox("ERROR in Left/Unilateral config file! Major packet loss will occur due to too much data over bandwidth.  Please fix senseLeft_config.json file and restart application to reload changes.");
+                return;
+            }
+            if (IsBilateral)
+            {
+                //Check to see if the sense setup is going to have major packet loss due to too much data over bandwidth.
+                if (!CheckPacketLoss(senseRightConfigModel))
+                {
+                    ShowMessageBox("ERROR in Right config file! Packet loss over maximum. Major packet loss will occur due to too much data over bandwidth.  Please fix senseRight_config.json file and restart application to reload changes.");
+                    return;
+                }
+            }
+            
             //If first time connecting, check that summit manager is null so we don't create another one
             if (theSummitManager == null)
             {
                 _log.Info("Initializing Summit Manager");
-                theSummitManager = new SummitManager(PROJECT_ID, 200, appConfigModel.VerboseLogOnForMedtronic);
+                theSummitManager = new SummitManager(PROJECT_ID, 200, false);
             }
             
             //If we're not connected already, start the worker thread to connect
             if (CanConnect)
             {
+                ConnectButtonEnabled = false;
                 IsSpinnerVisible = true;
                 _log.Info("Connecting...");
                 ConnectButtonText = "Connecting...";
@@ -2437,7 +2752,10 @@ namespace SCBS.ViewModels
                 MessageBox.Show("You must be connected to proceed to website. Please press connect and wait until both CTM and INS are green and try again.", "Connection Required", MessageBoxButton.OK, MessageBoxImage.Hand);
                 return;
             }
-            OpenUri(appConfigModel.WebPageButtons.WebPageOneURL);
+            if (!OpenUri(appConfigModel.WebPageButtons.WebPageOneURL))
+            {
+                MessageBox.Show("Please be sure you have the correct URL and the format includes https:// (ie https://www.google.com)", "Warning", MessageBoxButton.OK, MessageBoxImage.Hand);
+            }
         }
 
         /// <summary>
@@ -2450,7 +2768,10 @@ namespace SCBS.ViewModels
                 MessageBox.Show("You must be connected to proceed to website. Please press connect and wait until both CTM and INS are green and try again.", "Connection Required", MessageBoxButton.OK, MessageBoxImage.Hand);
                 return;
             }
-            OpenUri(appConfigModel.WebPageButtons.WebPageTwoURL);
+            if (!OpenUri(appConfigModel.WebPageButtons.WebPageTwoURL))
+            {
+                MessageBox.Show("Please be sure you have the correct URL and the format includes https:// (ie https://www.google.com)", "Warning", MessageBoxButton.OK, MessageBoxImage.Hand);
+            }
         }
 
         /// <summary>
@@ -2458,37 +2779,62 @@ namespace SCBS.ViewModels
         /// </summary>
         public async Task MoveGroupButtonClick()
         {
-            if (canConnect)
+            if (CanConnect)
             {
                 MessageBox.Show("Not Connected to INS", "Error moving groups on INS", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            bool shouldNotMoveGroup = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    MessageBoxResult messageResult = MessageBox.Show(Application.Current.MainWindow, "You are about to move to a different group. Proceed?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+                    switch (messageResult)
+                    {
+                        case MessageBoxResult.Yes:
+                            break;
+                        case MessageBoxResult.No:
+                            shouldNotMoveGroup = true;
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _log.Error(e);
+                }
+
+            });
+            if (shouldNotMoveGroup)
+            {
                 return;
             }
             SummitStim summitStim = new SummitStim(_log);
             HelperFunctions helperFunctions = new HelperFunctions();
             if (helperFunctions.CheckGroupIsCorrectFormat(appConfigModel.MoveGroupButton.GroupToMoveToLeftUnilateral))
             {
-                Tuple<bool, string> valueReturn = await Task.Run(() => summitStim.ChangeActiveGroup(theSummitLeft, helperFunctions.ConvertStimModelGroupToAPIGroup(appConfigModel.MoveGroupButton.GroupToMoveToLeftUnilateral), senseLeftConfigModel));
+                Tuple<bool, string> valueReturn = await summitStim.ChangeActiveGroup(theSummitLeft, helperFunctions.ConvertStimModelGroupToAPIGroup(appConfigModel.MoveGroupButton.GroupToMoveToLeftUnilateral), senseLeftConfigModel);
                 if (!valueReturn.Item1)
                 {
                     MessageBox.Show(valueReturn.Item2, "Error moving group on Left INS", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {
-                    await Task.Run(UpdateStimStatusGroupLeft);
+                    UpdateStimStatusGroupLeft();
                 }
             }
             if (isBilateral)
             {
                 if (helperFunctions.CheckGroupIsCorrectFormat(appConfigModel.MoveGroupButton.GroupToMoveToRight))
                 {
-                    Tuple<bool, string> valueReturn = summitStim.ChangeActiveGroup(theSummitRight, helperFunctions.ConvertStimModelGroupToAPIGroup(appConfigModel.MoveGroupButton.GroupToMoveToRight), senseRightConfigModel);
+                    Tuple<bool, string> valueReturn = await summitStim.ChangeActiveGroup(theSummitRight, helperFunctions.ConvertStimModelGroupToAPIGroup(appConfigModel.MoveGroupButton.GroupToMoveToRight), senseRightConfigModel);
                     if (!valueReturn.Item1)
                     {
                         MessageBox.Show(valueReturn.Item2, "Error moving group on Right INS", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                     else
                     {
-                        await Task.Run(UpdateStimStatusGroupRight);
+                        UpdateStimStatusGroupRight();
                     }
                 }
             }
@@ -2581,8 +2927,33 @@ namespace SCBS.ViewModels
         /// <summary>
         /// Button to exit program
         /// </summary>
-        public async Task ExitButtonClick()
+        public void ExitButtonClick()
         {
+            bool shouldNotExit = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    MessageBoxResult messageResult = MessageBox.Show(Application.Current.MainWindow, "Exit Program?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+                    switch (messageResult)
+                    {
+                        case MessageBoxResult.Yes:
+                            break;
+                        case MessageBoxResult.No:
+                            shouldNotExit = true;
+                            break;
+                    }
+                }
+                catch(Exception e)
+                {
+                    _log.Error(e);
+                }
+                
+            });
+            if (shouldNotExit)
+            {
+                return;
+            }
             _shouldStopWorkerThread = true;
             if (theSummitLeft != null)
             {
@@ -2590,7 +2961,7 @@ namespace SCBS.ViewModels
                 {
                     try
                     {
-                        await Task.Run(() => theSummitLeft.WriteSensingState(SenseStates.None, 0x00));
+                        theSummitLeft.WriteSensingState(SenseStates.None, 0x00);
                     }
                     catch (Exception e)
                     {
@@ -2604,7 +2975,7 @@ namespace SCBS.ViewModels
                 {
                     try
                     {
-                        await Task.Run(() => theSummitRight.WriteSensingState(SenseStates.None, 0x00));
+                        theSummitRight.WriteSensingState(SenseStates.None, 0x00);
                     }
                     catch (Exception e)
                     {
@@ -2614,12 +2985,36 @@ namespace SCBS.ViewModels
             }
             Thread.Sleep(500);
             // perform clean up. Abort continuous connection worker thread and dispose of summit system/manager
-            await Task.Run(() => DisposeSummitManagerAndSystem());
+            DisposeSummitManagerAndSystem();
             Environment.Exit(0);
         }
         #endregion
 
         #region UI Binding Elements
+        /// <summary>
+        /// Text for the application name and version
+        /// </summary>
+        public string ApplicationTitleText
+        {
+            get { return _applicationTitleText; }
+            set
+            {
+                _applicationTitleText = value;
+                NotifyOfPropertyChange(() => ApplicationTitleText);
+            }
+        }
+        /// <summary>
+        /// Sets the window style for researcher vs patient
+        /// </summary>
+        public WindowStyle WindowStyleForMainWindow
+        {
+            get { return _windowStyleForMainWindow; }
+            set
+            {
+                _windowStyleForMainWindow = value;
+                NotifyOfPropertyChange(() => WindowStyleForMainWindow);
+            }
+        }
         /// <summary>
         /// Determines if the move group button is visible or hidden
         /// </summary>
@@ -2718,15 +3113,147 @@ namespace SCBS.ViewModels
             }
         }
         /// <summary>
-        /// Hides the stim data if switch is enabled if set to true
+        /// Visibilitys the stim data if set to true
         /// </summary>
-        public bool StimDataVisible
+        public bool VisibilityStimGroupLeftUni
         {
-            get { return _stimDataVisible; }
+            get { return _visibilityStimGroupLeftUni; }
             set
             {
-                _stimDataVisible = value;
-                NotifyOfPropertyChange(() => StimDataVisible);
+                _visibilityStimGroupLeftUni = value;
+                NotifyOfPropertyChange(() => VisibilityStimGroupLeftUni);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimAmpLeftUni
+        {
+            get { return _visibilityStimAmpLeftUni; }
+            set
+            {
+                _visibilityStimAmpLeftUni = value;
+                NotifyOfPropertyChange(() => VisibilityStimAmpLeftUni);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimRateLeftUni
+        {
+            get { return _visibilityStimRateLeftUni; }
+            set
+            {
+                _visibilityStimRateLeftUni = value;
+                NotifyOfPropertyChange(() => VisibilityStimRateLeftUni);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimContactsLeftUni
+        {
+            get { return _visibilityStimContactsLeftUni; }
+            set
+            {
+                _visibilityStimContactsLeftUni = value;
+                NotifyOfPropertyChange(() => VisibilityStimContactsLeftUni);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimTherapyOnOffLeftUni
+        {
+            get { return _visibilityStimTherapyOnOffLeftUni; }
+            set
+            {
+                _visibilityStimTherapyOnOffLeftUni = value;
+                NotifyOfPropertyChange(() => VisibilityStimTherapyOnOffLeftUni);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimAdaptiveOnLeftUni
+        {
+            get { return _visibilityStimAdaptiveOnLeftUni; }
+            set
+            {
+                _visibilityStimAdaptiveOnLeftUni = value;
+                NotifyOfPropertyChange(() => VisibilityStimAdaptiveOnLeftUni);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimGroupRight
+        {
+            get { return _visibilityStimGroupRight; }
+            set
+            {
+                _visibilityStimGroupRight = value;
+                NotifyOfPropertyChange(() => VisibilityStimGroupRight);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimAmpRight
+        {
+            get { return _visibilityStimAmpRight; }
+            set
+            {
+                _visibilityStimAmpRight = value;
+                NotifyOfPropertyChange(() => VisibilityStimAmpRight);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimRateRight
+        {
+            get { return _visibilityStimRateRight; }
+            set
+            {
+                _visibilityStimRateRight = value;
+                NotifyOfPropertyChange(() => VisibilityStimRateRight);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimContactsRight
+        {
+            get { return _visibilityStimContactsRight; }
+            set
+            {
+                _visibilityStimContactsRight = value;
+                NotifyOfPropertyChange(() => VisibilityStimContactsRight);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimTherapyOnOffRight
+        {
+            get { return _visibilityStimTherapyOnOffRight; }
+            set
+            {
+                _visibilityStimTherapyOnOffRight = value;
+                NotifyOfPropertyChange(() => VisibilityStimTherapyOnOffRight);
+            }
+        }
+        /// <summary>
+        /// Visibilitys the stim data if set to true
+        /// </summary>
+        public bool VisibilityStimAdaptiveOnRight
+        {
+            get { return _visibilityStimAdaptiveOnRight; }
+            set
+            {
+                _visibilityStimAdaptiveOnRight = value;
+                NotifyOfPropertyChange(() => VisibilityStimAdaptiveOnRight);
             }
         }
         /// <summary>
@@ -2791,7 +3318,30 @@ namespace SCBS.ViewModels
                 NotifyOfPropertyChange(() => ConnectButtonColor);
             }
         }
-
+        /// <summary>
+        /// Binding used to change the text of the download log button/displays
+        /// </summary>
+        public string DownloadLogButtonText
+        {
+            get { return _downloadLogButtonText; }
+            set
+            {
+                _downloadLogButtonText = value;
+                NotifyOfPropertyChange(() => DownloadLogButtonText);
+            }
+        }
+        /// <summary>
+        /// Determines if the download log button is visible or hidden
+        /// </summary>
+        public bool DownloadLogButtonVisible
+        {
+            get { return _downloadLogButtonVisible; }
+            set
+            {
+                _downloadLogButtonVisible = value;
+                NotifyOfPropertyChange(() => DownloadLogButtonVisible);
+            }
+        }
         /// <summary>
         /// Binding used to change the text of the connect button/displays
         /// </summary>
@@ -2843,13 +3393,25 @@ namespace SCBS.ViewModels
         /// <summary>
         /// Determines if the connect button is enabled or disabled
         /// </summary>
-        public bool CanConnect
+        public bool ConnectButtonEnabled
         {
-            get { return canConnect; }
+            get { return connectButtonEnabled; }
             set
             {
-                canConnect = value;
-                NotifyOfPropertyChange(() => CanConnect);
+                connectButtonEnabled = value;
+                NotifyOfPropertyChange(() => ConnectButtonEnabled);
+            }
+        }
+        /// <summary>
+        /// Determines if the align button is enabled or disabled
+        /// </summary>
+        public bool AlignButtonEnabled
+        {
+            get { return alignButtonEnabled; }
+            set
+            {
+                alignButtonEnabled = value;
+                NotifyOfPropertyChange(() => AlignButtonEnabled);
             }
         }
 
@@ -2911,6 +3473,18 @@ namespace SCBS.ViewModels
             {
                 _progressVisibility = value;
                 NotifyOfPropertyChange(() => ProgressVisibility);
+            }
+        }
+        /// <summary>
+        /// True displays the tab bar and false hides it
+        /// </summary>
+        public Visibility TabVisibility
+        {
+            get { return _tabVisibility; }
+            set
+            {
+                _tabVisibility = value;
+                NotifyOfPropertyChange(() => TabVisibility);
             }
         }
         /// <summary>
@@ -3142,6 +3716,18 @@ namespace SCBS.ViewModels
             }
         }
         /// <summary>
+        /// Binding used to change the color of the Stim Therapy TextColor Right
+        /// </summary>
+        public Brush StimStateRightTextColor
+        {
+            get { return _stimStateRightTextColor ?? (_stimStateRightTextColor = Brushes.Black); }
+            set
+            {
+                _stimStateRightTextColor = value;
+                NotifyOfPropertyChange(() => StimStateRightTextColor);
+            }
+        }
+        /// <summary>
         /// Binding for the Stim Amp for Left
         /// </summary>
         public string StimAmpLeft
@@ -3174,7 +3760,31 @@ namespace SCBS.ViewModels
             set
             {
                 _stimStateLeft = value;
+                if(_stimStateLeft.Equals("TherapyActive"))
+                {
+                    StimStateLeftTextColor = Brushes.ForestGreen;
+                }
+                else if(_stimStateLeft.Equals("TherapyOff"))
+                {
+                    StimStateLeftTextColor = Brushes.Red;
+                }
+                else
+                {
+                    StimStateLeftTextColor = Brushes.Black;
+                }
                 NotifyOfPropertyChange(() => StimStateLeft);
+            }
+        }
+        /// <summary>
+        /// Binding used to change the color of the Stim Therapy TextColor Left
+        /// </summary>
+        public Brush StimStateLeftTextColor
+        {
+            get { return _stimStateLeftTextColor ?? (_stimStateLeftTextColor = Brushes.Black); }
+            set
+            {
+                _stimStateLeftTextColor = value;
+                NotifyOfPropertyChange(() => StimStateLeftTextColor);
             }
         }
         /// <summary>
@@ -3198,6 +3808,18 @@ namespace SCBS.ViewModels
             set
             {
                 _stimStateRight = value;
+                if (_stimStateRight.Equals("TherapyActive"))
+                {
+                    StimStateRightTextColor = Brushes.ForestGreen;
+                }
+                else if (_stimStateRight.Equals("TherapyOff"))
+                {
+                    StimStateRightTextColor = Brushes.Red;
+                }
+                else
+                {
+                    StimStateRightTextColor = Brushes.Black;
+                }
                 NotifyOfPropertyChange(() => StimStateRight);
             }
         }

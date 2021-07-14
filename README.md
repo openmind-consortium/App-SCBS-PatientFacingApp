@@ -55,7 +55,7 @@ There is ability to turn certain ctm beep noises on or off.  The most common set
 
 There is a button that may be turned on to allow the user to move to a specific group.  This is used to quickly move them into a safe group if they are running adaptive therapy or if you just want a button that moves them into a specified "safe" group that is preprogrammed with the RLP. The button text may be edited and each ins side may have a specific group assigned.
 
-Stim Sweep is a functionality that is coming soon that will allow the patient to run a config file that adjusts stim amp/pw/rate in a specified group and specified amount of time. 
+Stim Sweep is a functionality that will allows the patient to run a preconfigured set of stim settings on the device.  There is a config file that will be used to adjust stim amp/pw/rate in a specified group and specified amount of time. 
 
 There is a Montage functionality that will allow the patient to run multiple sense files one after another while recording data.  This requires a re-connection if already connected due to changing the Mode to 4 for optimal bandwidth. The instructions for the montage are customizable and the clinician can add as many montage sense files as they would like.  The time for each montage run is also customizable. The patient will get a total time for the entire montage and when running will get a progress status and timer countdown until finished.
 
@@ -76,193 +76,266 @@ The program gets its configurations from .json files.  In order to run the progr
 The first config file is the application config file.  It needs to be in the directory C:\\SCBS\\application_config.json. The format for this is:
 ```
 {
-	"comment": "true if it is bilateral or false if it is unilateral. Switch to true to show switch which allows setting the embedded adaptive. Align to true if you want the align button visible set to true, this moves to group b, turn stim on/off 4 times and moves to group A. Montage Sense sweep button visible to true. New session creates new session folder for medtronic json files. Get adaptive log info gets onboard application state changes. Get mirror data gets the onboard mirror log data. log beep event logs an event in EventLog.json every time it hears a noise in the microphone to align with tasks.",
+	"comment": "true if it is bilateral or false if it is unilateral. Switch is true if you want the switch tab functionality or false if you do not. Set align to true if you want the align button visible, you must have bilateral set true for this to work",
 	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
-	"Bilateral": false,
-	"Switch": false,
-	"Align": false,
-	"Montage": false,
-	"NewSession": false,
+	"Bilateral": true,
+	"Switch": true,
+	"Align": true,
+	"Montage": true,
+	"StimSweep": true,
+	"NewSession": true,
 	"HideReportButton": false,
 	"GetAdaptiveLogInfo": false,
+	"GetEventLogInfo": false,
 	"GetAdaptiveMirrorInfo": false,
 	"LogBeepEvent": false,
 	"CTMBeepEnables": {
 		"comment": "lets you choose what CTM Beeps you want enabled",
-		"None": true,
+		"None": true,	
 		"GeneralAlert": false,
 		"TelMCompleted": false,
 		"DeviceDiscovered": false,
 		"NoDeviceDiscovered": false,
-		"TelMLost": true
+		"TelMLost": false
 	},
 	"WebPageButtons": {
 		"comment": "URL for webpage to open and if you want the button enabled and button text",
 		"OpenWithoutBeingConnected": true,
-		"WebPageOneButtonEnabled": false,
+		"WebPageOneButtonEnabled": true,
 		"WebPageOneURL": "https://www.google.com",
-		"WebPageOneButtonText": "Adaptive Report",
-		"WebPageTwoButtonEnabled": false,
-		"WebPageTwoURL": "https://www.microsoft.com",
+		"WebPageOneButtonText": "Adaptive Patient Report",
+		"WebPageTwoButtonEnabled": true,
+		"WebPageTwoURL": "https://www.google.com",
 		"WebPageTwoButtonText": "Motor Diary"
 	},
 	"MoveGroupButton": {
 		"comment": "Allows you to move a specified group. GroupToMoveTo must be in format 'A', 'B', etc.  If a single INS, then use GroupToMoveToLeftUnilateral regardless of left or right",
-		"MoveGroupButtonText": "Adaptive OFF",
-		"MoveGroupButtonEnabled": false,
-		"GroupToMoveToLeftUnilateral": "C",
-		"GroupToMoveToRight": "C"
+		"MoveGroupButtonText": "Move Group",
+		"MoveGroupButtonEnabled": true,
+		"GroupToMoveToLeftUnilateral": "B",
+		"GroupToMoveToRight": "B"
+	},
+	"LogDownloadButton": {
+		"comment": "Allows you to enable button that downloads mirror and application and event log data from INS.",
+		"LogDownloadButtonText": "Download Log",
+		"LogDownloadButtonEnabled": true,
+		"LogTypesToDownload":{
+			"ApplicationLog": true,
+			"EventLog": true,
+			"MirrorLog": true
+		}
+	},
+	"StimDisplaySettings":{
+		"comment": "Allows you to hide the stim settings display from user.",
+		"LeftUnilateralSettings":{
+			"HideGroup": false,
+			"HideAmp": false,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		},
+		"RightSettings":{
+			"HideGroup": false,
+			"HideAmp": false,
+			"HideRate": false,
+			"HideStimContacts": false,
+			"HideTherapyOnOff": false,
+			"HideAdaptiveOn": false
+		}
 	}
 }
 ```
 - BasePathToJSONFiles is the base path where the medtronic json files will be written to. This should be the same as the SummitRegWithoutORCA.reg file on the line: "DataDirectory"="**C:\\\\ProgramData\\\\Medtronic ORCA**". This ensures that when the switch config files and the mirror log and event log files are written in the current session directory.
 - Set bilateral to true if bilateral else false for unilateral
-- Switch to true if you would like the Switch button to be present
+- Switch, Montage and Stim Sweep to true if you would like the button to be present. 
 - Align if you would like to use the align functionality
-- GetAdaptiveLogInfo on if you would like to get the adaptive state changes from the INS onboard log
-- GetAdaptiveMirrorInfo if you would like to get how long and how many times a state has been entered (for embedded adaptive). 
+- New Session button visible or not
+- HideReportButton to true if you don't want the report button to be visible.
+- GetAdaptiveLogInfo on if you would like to get the adaptive state changes from the INS onboard log automatically on initial connection
+- GetEventLogInfo on if you would like to get the onboard event log data automatically on initial connection
+- GetAdaptiveMirrorInfo if you would like to get how long and how many times a state has been entered (for embedded adaptive). This downloads automatically on initial connection.
 - Set LogBeepEvent to log an event into the Medtronic eventlog.json file any time the microphone hears a sound over a certain dB. You must plug your device into the mic before starting the program for it to register. This is good for aligning another task with the RC+S.
 - There is also the option to turn on different beeps for the CTM. Change any of the to true for that specific beep or None for no beep.
 - The WebPageButtons allows you to enable 2 different buttons or just one of the buttons at a time.  You can customize the button text and what web site it will take the user to. The user must be connected to their INS and CTM for the buttons to work.
+- LogDownloadButton allows you to get the onboard Adaptive log, the onboard Event log and/or the onboard mirror flash log. You can set the button text, if the button is visible or not and which onboard logs you would like to have the button press download.
+- StimDisplaySettings allows you to hide any stimulation settings from the user.
 
 #### Sense Config
 The next config files are used for sensing.  You will need to put both of these files in the location C:\\SCBS\\senseLeft_config.json and C:\\SCBS\\senseRight_config.json.  You will need both of these even if you aren't doing bilateral. If you are using just unilateral, then you will be using the senseLeft_config.json as your sense config file.  This is the standard default config file.  Both left and right config files have the same format:
 
 ```
 {
-  "eventType": {
-    "comment": "event name to use to log to .json files",
-    "type": "Home streaming"
-  },
-  "Mode": 3,
-  "Ratio": 32,
-  "SenseOptions": {
-    "comment": "lets you set what to sense",
-    "TimeDomain": true,
-    "FFT": true,
-    "Power": true,
-    "LD0": true,
-    "LD1": false,
-    "AdaptiveState": true,
-    "LoopRecording": false,
-    "Unused": false
-  },
-  "StreamEnables": {
-    "comment": "lets you set what to stream",
-    "TimeDomain": true,
-    "FFT": false,
-    "Power": true,
-    "Accelerometry": false,
-    "AdaptiveTherapy": false,
-    "AdaptiveState": false,
-    "EventMarker": false,
-    "TimeStamp": true
-  },
-  "Sense": {
-    "commentTDChannelDefinitions": "No more than two channels can be on a single bore. When configuring, channels on first bore will always be first. Can only have sampling rates of: 250, 500, and 1000 (Hz) or disable it by setting IsDisabled to true",
-    "commentFilters": "Stage one low pass(Lpf1) can only be: 450, 100, or 50 (Hz). Stage two low pass(Lpf2) can only be: 1700, 350, 160, or 100 (Hz). High pass(Hpf) can only be: 0.85, 1.2, 3.3, or 8.6 (Hz), Inputs[ anode(positive), cathode(negative) ]",
-    "TDSampleRate": 250,
-	"TimeDomains": [
-	  {
-		"ch0": "STN",
-		"IsEnabled": true,
-		"Hpf": 0.85,
-		"Lpf1": 100,
-		"Lpf2": 100,
-		"Inputs": [ 0, 2 ]
-	  },
-	  {
-		"ch1": "STN",
-		"IsEnabled": true,
-		"Hpf": 0.85,
-		"Lpf1": 100,
-		"Lpf2": 100,
-		"Inputs": [ 1, 3 ]
-	  },
-	  {
-		"ch2": "M1",
-		"IsEnabled": true,
-		"Hpf": 0.85,
-		"Lpf1": 450,
-		"Lpf2": 1700,
-		"Inputs": [ 8, 10 ]
-	  },
-	  {
-		"ch3": "M1",
-		"IsEnabled": true,
-		"Hpf": 0.85,
-		"Lpf1": 450,
-		"Lpf2": 1700,
-		"Inputs": [ 9, 11 ]
-	  }
-	],
-    "FFT": {
-      "commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and time domain must be enabled for that channel",
-      "Channel": 1,
-      "FftSize": 1024,
-      "FftInterval": 100,
-      "WindowLoad": 100,
-      "StreamSizeBins": 0,
-      "StreamOffsetBins": 0,
-	  "WindowEnabled": true
-    },
-	"commentPower": "each power band can be set from 0-250hz, 2 pos bands per channel. Ex: ChNPowerBandN:[lower, upper]",
-    "PowerBands": [
-		{
-			"comment": "Channel: 0 PowerBand: 0",
-			"ChannelPowerBand": [ 18, 22 ],
-			"IsEnabled": true
+	"eventType": {
+		"comment": "event name to use to log to .json files",
+		"type": "Home streaming"
+	},
+	"Mode": 4,
+	"Ratio": 4,
+	"SenseOptions": {
+		"comment": "lets you set what to sense",
+		"TimeDomain": true,
+		"FFT": true,
+		"Power": true,
+		"LD0": true,
+		"LD1": false,
+		"AdaptiveState": true,
+		"LoopRecording": false,
+		"Unused": false
+	},
+	"StreamEnables": {
+		"comment": "lets you set what to stream",
+		"TimeDomain": true,
+		"FFT": false,
+		"Power": true,
+		"Accelerometry": false,
+		"AdaptiveTherapy": true,
+		"AdaptiveState": true,
+		"EventMarker": true,
+		"TimeStamp": true
+	},
+	"Sense": {
+		"commentTDChannelDefinitions": "No more than two channels can be on a single bore. When configuring, channels on first bore will always be first. Can only have sampling rates of: 250, 500, and 1000 (Hz) or disable it by setting IsDisabled to true",
+		"commentFilters": "Stage one low pass(Lpf1) can only be: 450, 100, or 50 (Hz). Stage two low pass(Lpf2) can only be: 1700, 350, 160, or 100 (Hz). High pass(Hpf) can only be: 0.85, 1.2, 3.3, or 8.6 (Hz), Inputs[ anode(positive), cathode(negative) ], tdEvokedResponseEnable can either be 0 for standard, 16 for evoked 0 or 32 for evoked 1",
+		"TDSampleRate": 500,
+		"TimeDomains": [
+			{
+				"IsEnabled": true,
+				"Hpf": 0.85,
+				"Lpf1": 100,
+				"Lpf2": 100,
+				"Inputs": [
+					0,
+					2
+				],
+				"TdEvokedResponseEnable": 0
+			},
+			{
+				"IsEnabled": true,
+				"Hpf": 0.85,
+				"Lpf1": 100,
+				"Lpf2": 100,
+				"Inputs": [
+					0,
+					2
+				],
+				"TdEvokedResponseEnable": 0
+			},
+			{
+				"IsEnabled": true,
+				"Hpf": 0.85,
+				"Lpf1": 450,
+				"Lpf2": 1700,
+				"Inputs": [
+					8,
+					9
+				],
+				"TdEvokedResponseEnable": 0
+			},
+			{
+				"IsEnabled": true,
+				"Hpf": 0.85,
+				"Lpf1": 450,
+				"Lpf2": 1700,
+				"Inputs": [
+					10,
+					11
+				],
+				"TdEvokedResponseEnable": 0
+			}
+		],
+		"FFT": {
+			"commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and time domain must be enabled for that channel, WeightMultiplies can be shift: 0-7",
+			"Channel": 0,
+			"FftSize": 256,
+			"FftInterval": 100,
+			"WindowLoad": 100,
+			"StreamSizeBins": 0,
+			"StreamOffsetBins": 0,
+			"WindowEnabled": true,
+			"WeightMultiplies": 7
 		},
-		{
-			"comment": "Channel: 0 PowerBand: 1",
-			"ChannelPowerBand": [ 10, 12 ],
-			"IsEnabled": true
+		"commentPower": "each power band can be set from 0-250hz, 2 pos bands per channel. Ex: ChNPowerBandN:[lower, upper]",
+		"PowerBands": [
+			{
+				"comment": "Channel: 0 PowerBand: 0",
+				"ChannelPowerBand": [
+					16.6,
+					22.46
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 0 PowerBand: 1",
+				"ChannelPowerBand": [
+					118.16,
+					122.07
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 1 PowerBand: 0",
+				"ChannelPowerBand": [
+					131.84,
+					133.79
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 1 PowerBand: 1",
+				"ChannelPowerBand": [
+					127.93,
+					129.88
+				],
+				"IsEnabled": true
+			},
+			{
+				"comment": "Channel: 2 PowerBand: 0",
+				"ChannelPowerBand": [
+					8.79,
+					12.7
+				],
+				"IsEnabled": false
+			},
+			{
+				"comment": "Channel: 2 PowerBand: 1",
+				"ChannelPowerBand": [
+					16.6,
+					22.46
+				],
+				"IsEnabled": false
+			},
+			{
+				"comment": "Channel: 3 PowerBand: 0",
+				"ChannelPowerBand": [
+					8.79,
+					12.7
+				],
+				"IsEnabled": false
+			},
+			{
+				"comment": "Channel: 3 PowerBand: 1",
+				"ChannelPowerBand": [
+					16.6,
+					22.46
+				],
+				"IsEnabled": false
+			}
+		],
+		"Accelerometer": {
+			"commentAcc": "Can be 4,8,16,32,64Hz or set SampleRateDisabled to true for disabled",
+			"SampleRateDisabled": false,
+			"SampleRate": 64
 		},
-		{	
-			"comment": "Channel: 1 PowerBand: 0",
-			"ChannelPowerBand": [ 6, 7 ],
-			"IsEnabled": false
-		},
-		{
-			"comment": "Channel: 1 PowerBand: 1",
-			"ChannelPowerBand": [ 6, 7 ],
-			"IsEnabled": false
-		},
-		{
-			"comment": "Channel: 2 PowerBand: 0",
-			"ChannelPowerBand": [ 6, 7 ],
-			"IsEnabled": true
-		},
-		{
-			"comment": "Channel: 2 PowerBand: 1",
-			"ChannelPowerBand": [ 6, 7 ],
-			"IsEnabled": false
-		},
-		{
-			"comment": "Channel: 3 PowerBand: 0",
-			"ChannelPowerBand": [ 6, 7 ],
-			"IsEnabled": false
-		},
-		{
-			"comment": "Channel: 3 PowerBand: 1",
-			"ChannelPowerBand": [ 6, 7 ],
-			"IsEnabled": false
+		"Misc": {
+			"commentMiscParameters": "stream rate can be 30-100 by tens and is in ms; LoopRecordingTriggersState can be 0-8 or can be disabled by changing IsEnabled to false; Bridging can be 0 = None, 1 = Bridge 0-2 enabled, 2 = Bridge 1-3 enabled",
+			"StreamingRate": 100,
+			"LoopRecordingTriggersState": 0,
+			"LoopRecordingTriggersIsEnabled": true,
+			"LoopRecordingPostBufferTime": 53,
+			"Bridging": 0
 		}
-    ],
-    "Accelerometer": {
-      "commentAcc": "Can be 4,8,16,32,64Hz or set SampleRateDisabled to true for disabled",
-      "SampleRateDisabled": false,
-      "SampleRate": 64
-    },
-	"Misc": {
-      "commentMiscParameters": "stream rate can be 30-100 by tens and is in ms; LoopRecordingTriggersState can be 0-8 or can be disabled by changing IsEnabled to false; Bridging can be 0 = None, 1 = Bridge 0-2 enabled, 2 = Bridge 1-3 enabled",
-      "StreamingRate": 50,
-      "LoopRecordingTriggersState": 0,
-	  "LoopRecordingTriggersIsEnabled": true,
-      "LoopRecordingPostBufferTime": 53,
-      "Bridging": 0
-    }
-  }
+	}
 }
 ```
 NOTE: There is a method in MainImplementationViewModel.cs named CheckPacketLoss(). This method is used to check if the sense settings from the sense config file will run above the desired bandwidth causing major packet loss.  If the check comes back that it is over this limit, then it will report this to the user.
@@ -326,7 +399,7 @@ The montage config will be located in the directory C:\\SCBS\\Montage\\montage_c
 ```
 
 #### Switch Config using Adaptive Config
-Lastly, if you plan to use the Switch functionality, you will need to add the master switch config files for left (default if unilateral) and right.  The left goes in the directory C:\\SCBS\\switch\\left_default\\switch_left_default.json and C:\\SCBS\\switch\\right\\switch_right.json.  These are the master files and will be used to find out which adaptive file to run next for each side repectively.  The format is the same for both sides:
+If you plan to use the Switch functionality, you will need to add the master switch config files for left (default if unilateral) and right.  The left goes in the directory C:\\SCBS\\switch\\left_default\\switch_left_default.json and C:\\SCBS\\switch\\right\\switch_right.json.  These are the master files and will be used to find out which adaptive file to run next for each side repectively.  The format is the same for both sides:
 
 ```
 {
@@ -348,18 +421,18 @@ For this example, you will need 2 adaptive config files in the same directory as
 ```
 {
 	"Comment": "config file for the adaptive DBS configurations",
-	"Detection":{
+	"Detection": {
 		"LD0": {
 			"Comment": "Detection settings for LD0",
-			"B0": 1000,
-			"B1": 6000,
-			"UpdateRate": 5,
+			"B0": 30,
+			"B1": 31,
+			"UpdateRate": 15,
 			"OnsetDuration": 0,
-			"TerminationDuration": 0,
-			"HoldOffOnStartupTime": 1,
-			"StateChangeBlankingUponStateChange": 2,
-			"FractionalFixedPointValue": 0,
-			"DualThreshold": true,
+			"TerminationDuration": 2,
+			"HoldOffOnStartupTime": 0,
+			"StateChangeBlankingUponStateChange": 5,
+			"FractionalFixedPointValue": 4,
+			"DualThreshold": false,
 			"BlankBothLD": false,
 			"Inputs": {
 				"Ch0Band0": true,
@@ -371,22 +444,37 @@ For this example, you will need 2 adaptive config files in the same directory as
 				"Ch3Band0": false,
 				"Ch3Band1": false
 			},
-			"WeightVector": [1,0,0,0],
-			"NormalizationMultiplyVector": [1,0,0,0],
-			"NormalizationSubtractVector": [0,0,0,0]
+			"WeightVector": [
+				1.0,
+				0,
+				0,
+				0.0
+			],
+			"NormalizationMultiplyVector": [
+				1.0,
+				0,
+				0.0,
+				0.0
+			],
+			"NormalizationSubtractVector": [
+				0,
+				0,
+				0,
+				0
+			]
 		},
 		"LD1": {
 			"Comment": "Detection settings for LD1",
 			"IsEnabled": false,
-			"B0": 1000,
-			"B1": 6000,
-			"UpdateRate": 5,
+			"B0": 0,
+			"B1": 2000,
+			"UpdateRate": 1,
 			"OnsetDuration": 0,
 			"TerminationDuration": 0,
-			"HoldOffOnStartupTime": 1,
-			"StateChangeBlankingUponStateChange": 2,
+			"HoldOffOnStartupTime": 0,
+			"StateChangeBlankingUponStateChange": 0,
 			"FractionalFixedPointValue": 0,
-			"DualThreshold": true,
+			"DualThreshold": false,
 			"BlankBothLD": false,
 			"Inputs": {
 				"Ch0Band0": true,
@@ -398,28 +486,151 @@ For this example, you will need 2 adaptive config files in the same directory as
 				"Ch3Band0": false,
 				"Ch3Band1": false
 			},
-			"WeightVector": [1,0,0,0],
-			"NormalizationMultiplyVector": [1,0,0,0],
-			"NormalizationSubtractVector": [0,0,0,0]
+			"WeightVector": [
+				1.0,
+				0,
+				0.0,
+				0.0
+			],
+			"NormalizationMultiplyVector": [
+				1.0,
+				0,
+				0.0,
+				0.0
+			],
+			"NormalizationSubtractVector": [
+				0,
+				0,
+				0,
+				0
+			]
 		}
 	},
 	"Adaptive": {
 		"Program0": {
-			"Comment": "Rise_fall times how long it takes to ramp up or down. If stat is unused, set to 25.5",
-			"RiseTimes": 6500,
-			"FallTimes": 6500,
-			"RateTargetInHz": 100,
-			"State0AmpInMilliamps": 1,
-			"State1AmpInMilliamps": 1,
-			"State2AmpInMilliamps": 1,
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 100000,
+			"FallTimes": 100000,
+			"State0AmpInMilliamps": 0.0,
+			"State1AmpInMilliamps": 1.0,
+			"State2AmpInMilliamps": 2.5,
 			"State3AmpInMilliamps": 25.5,
 			"State4AmpInMilliamps": 25.5,
 			"State5AmpInMilliamps": 25.5,
 			"State6AmpInMilliamps": 25.5,
 			"State7AmpInMilliamps": 25.5,
 			"State8AmpInMilliamps": 25.5
+		},
+		"Program1": {
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 0,
+			"FallTimes": 0,
+			"State0AmpInMilliamps": 25.5,
+			"State1AmpInMilliamps": 25.5,
+			"State2AmpInMilliamps": 25.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Program2": {
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 0,
+			"FallTimes": 0,
+			"State0AmpInMilliamps": 25.5,
+			"State1AmpInMilliamps": 25.5,
+			"State2AmpInMilliamps": 25.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Program3": {
+			"Comment": "Rise_fall times how long it takes to ramp up or down. If state is unused, set to 25.5",
+			"RiseTimes": 0,
+			"FallTimes": 0,
+			"State0AmpInMilliamps": 25.5,
+			"State1AmpInMilliamps": 25.5,
+			"State2AmpInMilliamps": 25.5,
+			"State3AmpInMilliamps": 25.5,
+			"State4AmpInMilliamps": 25.5,
+			"State5AmpInMilliamps": 25.5,
+			"State6AmpInMilliamps": 25.5,
+			"State7AmpInMilliamps": 25.5,
+			"State8AmpInMilliamps": 25.5
+		},
+		"Rates": {
+			"Comment": "Rates can change for each state across all programs",
+			"State0": {
+				"RateTargetInHz": 128,
+				"SenseFriendly": true
+			},
+			"State1": {
+				"RateTargetInHz": 132,
+				"SenseFriendly": true
+			},
+			"State2": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State3": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State4": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State5": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State6": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State7": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			},
+			"State8": {
+				"RateTargetInHz": 120,
+				"SenseFriendly": true
+			}
 		}
-	}	
+	}
+}
+```
+
+#### Stim Sweep
+The stim sweep runs through a pre-configured set of stim settings. This can be ran unilateral or bilaterally.  You can choose which group to run the stim sweep in.  You can change the stim amplitude, rate and pw and specify which program to change.  The time to run must be in milliseconds and each time must be rounded to the nearest 100th with a minimum possible time at 100ms.  The EventMarkerDelayTimeInMilliSeconds is used to add a flag in the EventLog.json file the time after a sweep stars and the time before a sweep ends.  CurrentIndex starts the stim sweep at that index.  The stim sweep config file must be named stim_sweep_config.json and be placed in the directory C:\\SCBS\Stim_Sweep\stim_sweep_config.json.  
+***The program will attempt to move to the original group but sometimes is unsuccessful.
+
+The format for the stim sweep:
+```
+{
+	"comment": "Each index is one run. So the first index of each matrix contains the parameters for the first run and the second is the second run and so on. AmpInMa - is the amplitude in milliamps DBS will go to,  RateInHz is the frequency in Hz stimulate will be delivered at, PulseWidthInMicroSeconds is the pulse width for stimulation, TimeToRunInMilliSeconds is the time to run each stimulation run in milliseconds (the lowest is 100ms)- PLEASE ROUND TIMES TO THE NEAREST 100ms!, and EventMarkerDelayTimeInMilliSeconds is the duration after stimulation command has given that even marker is written. This is done to account for stimulation ramp up time that is set by RLP and to allow for easy data analysis. CurrentIndex is the index to run next",
+	"LeftINSOrUnilateral": {
+		"GroupToRunStimSweep": "C",
+		"RateInHz":					[130, 5, 130, 5, 130],
+		"Program":					[0,	0, 0, 0, 0],
+		"AmpInmA": 					[2,	0, 2, 0, 2],
+		"PulseWidthInMicroSeconds": [60, 80, 60, 80, 60]
+	},
+	"RightINS": {
+		"GroupToRunStimSweep": "B",
+		"RateInHz":					[5, 130, 5, 130, 5],
+		"Program":					[0, 0, 0, 0, 0],
+		"AmpInmA": 					[2,	0, 2, 0, 2],
+		"PulseWidthInMicroSeconds": [80, 60, 80, 60, 80]
+	},
+	"TimeToRunInMilliSeconds": 			[10000, 30000, 10000, 100, 30000],
+	"EventMarkerDelayTimeInMilliSeconds": 500,
+	"CurrentIndex": 0
 }
 ```
 

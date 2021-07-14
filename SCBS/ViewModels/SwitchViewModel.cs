@@ -56,6 +56,7 @@ namespace SCBS.ViewModels
         private volatile bool _stopBothThreads = false;
         private volatile bool _cancelButtonPressed = false;
         private string leftPatientID, rightPatientID, leftDeviceID, rightDeviceID;
+        private SummitSensing summitSensing;
 
         public SwitchViewModel(ref SummitSystem theSummitLeft, ref SummitSystem theSummitRight, bool isBilateral, string projectID, ILog _log, AppModel appModel)
         {
@@ -70,6 +71,7 @@ namespace SCBS.ViewModels
             this.projectID = projectID;
             this._log = _log;
             this.appModel = appModel;
+            summitSensing = new SummitSensing(_log);
 
             //Load master config files and check to make sure they aren't null
             jSONService = new JSONService(_log);
@@ -96,7 +98,7 @@ namespace SCBS.ViewModels
                     if (masterSwitchModelLeftDefault.WaitTimeIsEnabled)
                     {
                         var start = DateTime.Parse(masterSwitchModelLeftDefault.DateTimeLastSwitch);
-                        if (start.AddMinutes(masterSwitchModelLeftDefault.WaitTimeInMinutes) > DateTime.UtcNow)
+                        if (start.AddMinutes(masterSwitchModelLeftDefault.WaitTimeInMinutes) > DateTime.Now)
                         {
                             IsSwitchEnabled = false;
                             DisplayMessageBox("You have not reached the minimum time until the next run. Please try again later.");
@@ -112,7 +114,7 @@ namespace SCBS.ViewModels
                             if (masterSwitchModelRight.WaitTimeIsEnabled)
                             {
                                 var start = DateTime.Parse(masterSwitchModelRight.DateTimeLastSwitch);
-                                if (start.AddMinutes(masterSwitchModelRight.WaitTimeInMinutes) > DateTime.UtcNow)
+                                if (start.AddMinutes(masterSwitchModelRight.WaitTimeInMinutes) > DateTime.Now)
                                 {
                                     IsSwitchEnabled = false;
                                     DisplayMessageBox("You have not reached the minimum time until the next run. Please try again later.");
@@ -129,6 +131,23 @@ namespace SCBS.ViewModels
                     IsSwitchEnabled = false;
                     _log.Error(e);
                 }
+            }
+
+            //Load left sense config file
+            leftSenseModel = jSONService?.GetSenseModelFromFile(senseLeftFileLocation);
+            if (leftSenseModel == null)
+            {
+                _log.Warn("Error occurred loading sense config file");
+                Messages.Add("Error occurred loading left sense config file... Please fix config file and try again...");
+                IsSwitchEnabled = false;
+            }
+            //Load right sense config file
+            rightSenseModel = jSONService?.GetSenseModelFromFile(senseRightFileLocation);
+            if (rightSenseModel == null)
+            {
+                _log.Warn("Error occurred loading sense config file");
+                Messages.Add("Error occurred loading right sense config file... Please fix config file and try again...");
+                IsSwitchEnabled = false;
             }
             Messages.Add("Click the Switch button if you would like to run the next iteration of adaptive/sham therapy.");
             Messages.Add("Please note that your therapy will turn off while it sets up.");
@@ -205,6 +224,21 @@ namespace SCBS.ViewModels
         /// <returns>async Task</returns>
         private async Task GetPatientID()
         {
+            try
+            {
+                summitSensing.StopStreaming(theSummitLeft, false);
+                if (isBilateral)
+                {
+                    summitSensing.StopStreaming(theSummitRight, false);
+                }
+                Thread.Sleep(500);
+            }
+            catch (Exception e)
+            {
+                //do nothing. Just keep looping until we actually get the patient id
+                _log.Error(e);
+            }
+
             Messages.Add("Retrieving Patient ID...");
             _log.Info("Retrieving Patient ID");
             int countdown = 10;
@@ -304,7 +338,7 @@ namespace SCBS.ViewModels
         /// </summary>
         private void WorkerThreadLeftDefault()
         {
-            APIReturnInfo bufferReturnInfo;
+            int counter = 5;
             _log.Info("Starting Default Side Update");
             
             //Get the filename from the config list at the current index
@@ -323,6 +357,7 @@ namespace SCBS.ViewModels
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
@@ -342,6 +377,7 @@ namespace SCBS.ViewModels
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
@@ -352,110 +388,167 @@ namespace SCBS.ViewModels
                 _stopBothThreads = true;
                 return;
             }
-            
-            //Load sense config file
-            leftSenseModel = jSONService?.GetSenseModelFromFile(senseLeftFileLocation);
-            if(leftSenseModel == null)
-            {
-                _log.Warn("Error occurred loading sense config file");
-                Messages.Add("Error occurred loading sense config file... Please fix config file and try again...");
-                _stopBothThreads = true;
-                return;
-            }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Turning stim off for left");
-                //Stim therapy must be off to setup embedded adaptive DBS
-                bufferReturnInfo = theSummitLeft.StimChangeTherapyOff(false);
-                Messages.Add("Turning Stim Therapy OFF");
-                if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Turn Stim Therapy off", false))
+                if (TurnStimOnorOff(theSummitLeft, "Turning stim off", false))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning stim off... Please try again...");
+                Messages.Add("Error occurred turn stim off... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
             Thread.Sleep(300);
-            try
+
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Turn embedded off left");
-                //Make sure embedded therapy is turned off while setting up parameters
-                bufferReturnInfo = theSummitLeft.WriteAdaptiveMode(AdaptiveTherapyModes.Disabled);
-                if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Disabling Embedded Therapy Mode", true))
+                if (WriteAdaptiveMode(theSummitLeft, "Turn embedded off", AdaptiveTherapyModes.Disabled))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning adaptive off... Please try again...");
+                Messages.Add("Error occurred turn embedded off... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
             _log.Info("Stop sensing left");
             //Stop sensing
-            if (!StopSensing(theSummitLeft, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Error occurred stopping sensing...Please try again...");
+                if (StopSensing(theSummitLeft, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred stop sensing... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
             _log.Info("Configure sensing left");
             //configure sensing 
-            if (!SummitConfigureSensing(theSummitLeft, leftSenseModel, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not configure sensing...Please try again...");
+                if (SummitConfigureSensing(theSummitLeft, leftSenseModel, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred configure sensing... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
             _log.Info("Configure LD0 detector left");
             //configure LD0 
-            if (!WriteLD0DetectorConfiguration(leftAdaptiveModel, theSummitLeft, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not configure detector for LD0");
+                if (WriteLD0DetectorConfiguration(leftAdaptiveModel, theSummitLeft, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred configure detector for LD0... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
@@ -465,11 +558,28 @@ namespace SCBS.ViewModels
                 {
                     _log.Info("Configure LD1 detector left");
                     //configure LD1
-                    if (!WriteLD1DetectorConfiguration(leftAdaptiveModel, theSummitLeft, true))
+                    counter = 5;
+                    while (counter > 0)
                     {
-                        Messages.Add("Could not configure detector for LD1");
+                        if (WriteLD1DetectorConfiguration(leftAdaptiveModel, theSummitLeft, false))
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            counter--;
+                            Thread.Sleep(300);
+                        }
+                        if (_stopBothThreads)
+                        {
+                            SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                            return;
+                        }
+                    }
+                    if (counter == 0)
+                    {
+                        Messages.Add("Error occurred configure detector for LD1... Please try again...");
                         _stopBothThreads = true;
-                        return;
                     }
                 }
             }
@@ -478,53 +588,76 @@ namespace SCBS.ViewModels
                 _log.Error(e);
                 Messages.Add("Error occurred checking if LD1 is enabled. Please check adaptive config file and try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
             
             //configure adaptive and update 
             // Clear settings
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Clear adaptive settings left");
-                bufferReturnInfo = theSummitLeft.WriteAdaptiveClearSettings(AdaptiveClearTypes.All, 0);
-                if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Clear Apative Therapy Settings", true))
+                if (WriteAdaptiveClearSettings(theSummitLeft, "Clear adaptive settings", AdaptiveClearTypes.All))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
                 Messages.Add("Error occurred clearing adaptive settings... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
             try
             {
-                _log.Info("Write adaptive deltas left");
                 // Deltas - 0.1mA/second
                 AdaptiveDeltas[] embeddedDeltas = new AdaptiveDeltas[4];
                 embeddedDeltas[0] = new AdaptiveDeltas(leftAdaptiveModel.Adaptive.Program0.RiseTimes, leftAdaptiveModel.Adaptive.Program0.FallTimes);
                 embeddedDeltas[1] = new AdaptiveDeltas(0, 0);
                 embeddedDeltas[2] = new AdaptiveDeltas(0, 0);
                 embeddedDeltas[3] = new AdaptiveDeltas(0, 0);
-                bufferReturnInfo = theSummitLeft.WriteAdaptiveDeltas(embeddedDeltas);
-                if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Write Adaptive Deltas", true))
+                counter = 5;
+                while (counter > 0)
                 {
+                    if (WriteAdaptiveDeltas(theSummitLeft, "Write Adaptive Deltas", embeddedDeltas))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        counter--;
+                        Thread.Sleep(300);
+                    }
+                    if (_stopBothThreads)
+                    {
+                        SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                        return;
+                    }
+                }
+                if (counter == 0)
+                {
+                    Messages.Add("Error occurred writing Adaptive Deltas... Please try again...");
                     _stopBothThreads = true;
-                    return;
                 }
             }
             catch (Exception e)
@@ -537,134 +670,163 @@ namespace SCBS.ViewModels
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
+
             _log.Info("Write adaptive states left");
             //Attempt to write adaptive states and settings
-            if (!WriteAdaptiveStates(leftAdaptiveModel, theSummitLeft, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not write adaptive states... Please try again...");
+                if (WriteAdaptiveStates(leftAdaptiveModel, theSummitLeft, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred writing adaptive states... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
+
             _log.Info("Start sensing and streaming left");
-            if (!StartSensingAndStreaming(true, theSummitLeft, leftSenseModel))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not start sensing or streaming... Please try again...");
+                if (StartSensingAndStreaming(false, theSummitLeft, leftSenseModel, leftAdaptiveModel))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred starting sensing and streaming... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
             
             // Set the Stimulation Mode to Adaptive
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Write embedded adaptive left");
-                bufferReturnInfo = theSummitLeft.WriteAdaptiveMode(AdaptiveTherapyModes.Embedded);
-                if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Turn Adaptive Therapy to Embedded", true))
+                if (WriteAdaptiveMode(theSummitLeft, "Write embedded adaptive", AdaptiveTherapyModes.Embedded))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning on embedded therapy mode... Please try again...");
+                Messages.Add("Error occurred writing embedded adaptive... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
             // Make Group D Active
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Move to group d left");
-                bufferReturnInfo = theSummitLeft.StimChangeActiveGroup(ActiveGroup.Group3);
-                if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Change Stim Active Group to D", true))
+                if (ChangeActiveGroup(theSummitLeft, "Move to group D", ActiveGroup.Group3))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred changing to group D... Please try again...");
+                Messages.Add("Error occurred moving to group D... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
             
             // Turn on Stim
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Turn stim therapy on left");
-                bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                Messages.Add("Turning Stim Therapy ON");
-                if(CheckForReturnError(bufferReturnInfo, theSummitLeft, "Turn stim therapy ON", true))
+                if (TurnStimOnorOff(theSummitLeft, "Turn stim therapy on", true))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning therapy on... Please try again...");
+                Messages.Add("Error occurred turning stim therapy on... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
-                return;
-            }
-
-            // Reset POR if set
-            if (bufferReturnInfo.RejectCodeType == typeof(MasterRejectCode)
-                && (MasterRejectCode)bufferReturnInfo.RejectCode == MasterRejectCode.ChangeTherapyPor)
-            {
-                _log.Info("Reset POR bit left");
-                ResetPOR(theSummitLeft);
-                try
-                {
-                    _log.Info("Turn therapy on left");
-                    bufferReturnInfo = theSummitLeft.StimChangeTherapyOn();
-                    if (CheckForReturnError(bufferReturnInfo, theSummitLeft, "Turn Stim Therapy On", true))
-                    {
-                        _stopBothThreads = true;
-                        return;
-                    }
-                }
-                catch (Exception e)
-                {
-                    _log.Error(e);
-                    Messages.Add("Error occurred turning therapy on... Please try again...");
-                    _stopBothThreads = true;
-                    return;
-                }
-            }
-
-            if (_stopBothThreads)
-            {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
             
@@ -687,29 +849,29 @@ namespace SCBS.ViewModels
                 _log.Error(e);
                 Messages.Add("Error occurred reading current index in default config file... Please fix config file and try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
             try
             {
                 _log.Info("Saving new DateTimeLastSwitch in left");
-                masterSwitchModelLeftDefault.DateTimeLastSwitch = DateTime.UtcNow.ToString();
+                masterSwitchModelLeftDefault.DateTimeLastSwitch = DateTime.Now.ToString();
             }
             catch (Exception e)
             {
                 _log.Error(e);
                 Messages.Add("Error occurred reading date and time since last switch in the config file... Please fix config file and try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitLeft);
                 return;
             }
 
@@ -723,7 +885,7 @@ namespace SCBS.ViewModels
         /// </summary>
         private void WorkerThreadRight()
         {
-            APIReturnInfo bufferReturnInfo;
+            int counter = 5;
             _log.Info("Starting bilateral right side");
 
             //Get the filename from the config list at the current index
@@ -742,6 +904,7 @@ namespace SCBS.ViewModels
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
@@ -756,11 +919,11 @@ namespace SCBS.ViewModels
                 _log.Warn("Error occurred reading current filename for config file");
                 Messages.Add("Error occurred reading current filename for config file... Please fix config file and try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
@@ -769,109 +932,168 @@ namespace SCBS.ViewModels
                 _log.Warn("Error occurred loading adaptive config file");
                 Messages.Add("Error occurred loading adaptive config file... Please fix config file and try again...");
                 _stopBothThreads = true;
-                return;
-            }
-            
-            //Load sense config file
-            rightSenseModel = jSONService?.GetSenseModelFromFile(senseRightFileLocation);
-            if (rightSenseModel == null)
-            {
-                _log.Warn("Error occurred loading sense config file");
-                Messages.Add("Error occurred loading sense config file... Please fix config file and try again...");
-                _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Turnign stim therapy off");
-                //Stim therapy must be off to setup embedded adaptive DBS
-                bufferReturnInfo = theSummitRight.StimChangeTherapyOff(false);
-                Messages.Add("Turning Stim Therapy OFF");
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Turn Stim Therapy off", false))
+                if (TurnStimOnorOff(theSummitRight, "Turning Stim Therapy OFF for Right", false))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
                 Messages.Add("Error occurred turning stim off... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
             Thread.Sleep(300);
-            try
+
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Disable adaptive therapy right");
-                //Make sure embedded therapy is turned off while setting up parameters
-                bufferReturnInfo = theSummitRight.WriteAdaptiveMode(AdaptiveTherapyModes.Disabled);
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Disabling Embedded Therapy Mode", true))
+                if (WriteAdaptiveMode(theSummitRight, "Disable adaptive therapy right", AdaptiveTherapyModes.Disabled))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning adaptive off... Please try again...");
+                Messages.Add("Error occurred in write adaptive mode... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
+
             _log.Info("Stop sensing right");
             //Stop sensing
-            if (!StopSensing(theSummitRight, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Error occurred stopping sensing...Please try again...");
+                if (StopSensing(theSummitRight, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred stopping sense in right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
+
             _log.Info("Configure sensing right");
             //configure sensing 
-            if (!SummitConfigureSensing(theSummitRight, rightSenseModel, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not configure sensing...Please try again...");
+                if (SummitConfigureSensing(theSummitRight, rightSenseModel, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred configuring sense in right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
+
             _log.Info("Write LD0 detector right");
             //configure LD0 
-            if (!WriteLD0DetectorConfiguration(rightAdaptiveModel, theSummitRight, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not configure detector for LD0");
+                if (WriteLD0DetectorConfiguration(rightAdaptiveModel, theSummitRight, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred writing ld0 detector in right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
@@ -881,11 +1103,28 @@ namespace SCBS.ViewModels
                 {
                     _log.Info("Write LD1 detector right");
                     //configure LD1
-                    if (!WriteLD1DetectorConfiguration(rightAdaptiveModel, theSummitRight, true))
+                    counter = 5;
+                    while (counter > 0)
                     {
-                        Messages.Add("Could not configure detector for LD1");
+                        if (WriteLD1DetectorConfiguration(rightAdaptiveModel, theSummitRight, false))
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            counter--;
+                            Thread.Sleep(300);
+                        }
+                        if (_stopBothThreads)
+                        {
+                            SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                            return;
+                        }
+                    }
+                    if (counter == 0)
+                    {
+                        Messages.Add("Error occurred writing ld1 detector in right... Please try again...");
                         _stopBothThreads = true;
-                        return;
                     }
                 }
             }
@@ -894,193 +1133,244 @@ namespace SCBS.ViewModels
                 _log.Error(e);
                 Messages.Add("Error occurred checking if LD1 is enabled. Please check adaptive config file and try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
             
             //configure adaptive and update 
             // Clear settings
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Clear adaptive settings right");
-                bufferReturnInfo = theSummitRight.WriteAdaptiveClearSettings(AdaptiveClearTypes.All, 0);
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Clear Apative Therapy Settings", true))
+                if (WriteAdaptiveClearSettings(theSummitRight, "Clear adaptive settings right", AdaptiveClearTypes.All))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred clearing adaptive settings... Please try again...");
+                Messages.Add("Error occurred in write adaptive clear settings... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
             try
             {
-                _log.Info("Write deltas right");
                 // Deltas - 0.1mA/second
                 AdaptiveDeltas[] embeddedDeltas = new AdaptiveDeltas[4];
                 embeddedDeltas[0] = new AdaptiveDeltas(rightAdaptiveModel.Adaptive.Program0.RiseTimes, rightAdaptiveModel.Adaptive.Program0.FallTimes);
                 embeddedDeltas[1] = new AdaptiveDeltas(0, 0);
                 embeddedDeltas[2] = new AdaptiveDeltas(0, 0);
                 embeddedDeltas[3] = new AdaptiveDeltas(0, 0);
-                bufferReturnInfo = theSummitRight.WriteAdaptiveDeltas(embeddedDeltas);
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Write Adaptive Deltas", true))
+                counter = 5;
+                while (counter > 0)
                 {
+                    if (WriteAdaptiveDeltas(theSummitRight, "Write deltas right", embeddedDeltas))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        counter--;
+                        Thread.Sleep(300);
+                    }
+                    if (_stopBothThreads)
+                    {
+                        SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                        return;
+                    }
+                }
+                if (counter == 0)
+                {
+                    Messages.Add("Error occurred in write adaptive deltas right... Please try again...");
                     _stopBothThreads = true;
-                    return;
                 }
             }
             catch (Exception e)
             {
                 _log.Error(e);
-                Messages.Add("Error occurred writing adaptive deltas... Please try again...");
+                Messages.Add("Error occurred writing adaptive deltas right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
+
             _log.Info("Write adaptive states right");
             //Attempt to write adaptive states and settings
-            if (!WriteAdaptiveStates(rightAdaptiveModel, theSummitRight, true))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("--ERROR: Writing Adaptive States. Please check connection or that adaptive config file is correct--");
+                if (WriteAdaptiveStates(rightAdaptiveModel, theSummitRight, false))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred writing adaptive states in right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
+
             _log.Info("Start sensing and streaming right");
-            if (!StartSensingAndStreaming(true, theSummitRight, rightSenseModel))
+            counter = 5;
+            while (counter > 0)
             {
-                Messages.Add("Could not start sensing or streaming... Please try again...");
+                if (StartSensingAndStreaming(false, theSummitRight, rightSenseModel, rightAdaptiveModel))
+                {
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
+                    return;
+                }
+            }
+            if (counter == 0)
+            {
+                Messages.Add("Error occurred starting sensing and streaming in right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
             // Set the Stimulation Mode to Adaptive
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Write embedded adaptive right");
-                bufferReturnInfo = theSummitRight.WriteAdaptiveMode(AdaptiveTherapyModes.Embedded);
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Turn Adaptive Therapy to Embedded", true))
+                if (WriteAdaptiveMode(theSummitRight, "Write embedded adaptive right", AdaptiveTherapyModes.Embedded))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning on embedded therapy mode... Please try again...");
+                Messages.Add("Error occurred in write embedded adaptive right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
             // Make Group D Active
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Move to group D right");
-                bufferReturnInfo = theSummitRight.StimChangeActiveGroup(ActiveGroup.Group3);
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Change Stim Active Group to D", true))
+                if (ChangeActiveGroup(theSummitRight, "Move to group D right", ActiveGroup.Group3))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred changing to group D... Please try again...");
+                Messages.Add("Error occurred in move to group D right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
             // Turn on Stim
-            try
+            counter = 5;
+            while (counter > 0)
             {
-                _log.Info("Turn Stim therapy On right");
-                bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                Messages.Add("Turning Stim Therapy ON");
-                if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Turn stim therapy ON", true))
+                if (TurnStimOnorOff(theSummitRight, "Turn stim therapy on right", true))
                 {
-                    _stopBothThreads = true;
+                    break;
+                }
+                else
+                {
+                    counter--;
+                    Thread.Sleep(300);
+                }
+                if (_stopBothThreads)
+                {
+                    SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                     return;
                 }
             }
-            catch (Exception e)
+            if (counter == 0)
             {
-                _log.Error(e);
-                Messages.Add("Error occurred turning therapy on... Please try again...");
+                Messages.Add("Error occurred turning stim on right... Please try again...");
                 _stopBothThreads = true;
-                return;
             }
 
             if (_stopBothThreads)
             {
-                return;
-            }
-            
-            // Reset POR if set
-            if (bufferReturnInfo.RejectCodeType == typeof(MasterRejectCode)
-                && (MasterRejectCode)bufferReturnInfo.RejectCode == MasterRejectCode.ChangeTherapyPor)
-            {
-                _log.Info("Reset POR bit right");
-                ResetPOR(theSummitRight);
-                try
-                {
-                    _log.Info("Turn stim therapy on right");
-                    bufferReturnInfo = theSummitRight.StimChangeTherapyOn();
-                    if (CheckForReturnError(bufferReturnInfo, theSummitRight, "Turn Stim Therapy On", true))
-                    {
-                        _stopBothThreads = true;
-                        return;
-                    }
-                }
-                catch (Exception e)
-                {
-                    _log.Error(e);
-                    Messages.Add("Error occurred turning therapy on... Please try again...");
-                    _stopBothThreads = true;
-                    return;
-                }
-            }
-
-            if (_stopBothThreads)
-            {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
             
@@ -1108,13 +1398,14 @@ namespace SCBS.ViewModels
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
             try
             {
                 _log.Info("Saving new DateTimeLastSwitch in right");
-                masterSwitchModelRight.DateTimeLastSwitch = DateTime.UtcNow.ToString();
+                masterSwitchModelRight.DateTimeLastSwitch = DateTime.Now.ToString();
             }
             catch (Exception e)
             {
@@ -1126,6 +1417,7 @@ namespace SCBS.ViewModels
 
             if (_stopBothThreads)
             {
+                SetEmbeddedOffGroupAStimOnWhenErrorOccurs(theSummitRight);
                 return;
             }
 
@@ -1195,8 +1487,13 @@ namespace SCBS.ViewModels
                     {
                         WriteEventLog(theSummitLeft, "Switch Successful but files not written to directory", "Could not log switch success with file write error in event log. Please report error to clinician.");
                         WriteEventLog(theSummitRight, "Switch Successful but files not written to directory", "Could not log switch success with file write error in event log. Please report error to clinician.");
+                        _log.Info("Switch for bilateral successful but files not written to directory!");
+                        DisplayMessageBox("SWITCH SUCCESSFUL");
+                        //SendEmailToConfirm();
+                        flagToQuitWhileLoop = true;
+                        TryClose();
+                        return;
                     }
-                    flagToQuitWhileLoop = true;
                 }
                 else if (!isBilateral && leftSideFinished)
                 {
@@ -1223,7 +1520,7 @@ namespace SCBS.ViewModels
                     _log.Info("Left side finished... Writing files back to directories");
                     if (WriteLeftConfigFilesToDirectories())
                     {
-                        _log.Info("Switch for left side successful!");
+                        _log.Info("Switch for unilateral side successful!");
                         DisplayMessageBox("SWITCH SUCCESSFUL");
                         //SendEmailToConfirm();
                         flagToQuitWhileLoop = true;
@@ -1233,6 +1530,12 @@ namespace SCBS.ViewModels
                     else
                     {
                         WriteEventLog(theSummitLeft, "Switch Successful but files not written to directory", "Could not log switch success with file write error in event log. Please report error to clinician.");
+                        _log.Info("Switch for unilateral successful but files not written to directory!");
+                        DisplayMessageBox("SWITCH SUCCESSFUL");
+                        //SendEmailToConfirm();
+                        flagToQuitWhileLoop = true;
+                        TryClose();
+                        return;
                     }
                     flagToQuitWhileLoop = true;
                 }
@@ -1271,7 +1574,15 @@ namespace SCBS.ViewModels
                     _log.Error(e);
                     MessageBox.Show("Could not log switch failed in event log. Please report error to clinician.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
-
+                try
+                {
+                    summitSensing.StartStreaming(theSummitLeft, leftSenseModel, false);
+                    summitSensing.StartStreaming(theSummitRight, rightSenseModel, false);
+                }
+                catch (Exception e)
+                {
+                    _log.Error(e);
+                }
                 _log.Warn("Error occurred and need to run switch again");
                 DisplayMessageBox("An error occurred while updating.  Please run Switch again");
                 TryClose();
@@ -1288,6 +1599,147 @@ namespace SCBS.ViewModels
             _stopBothThreads = true;
             TryClose();
         }
+
+        #region Medtronic Switch Calls
+        /// <summary>
+        /// Turns stim therapy on or off
+        /// </summary>
+        /// <param name="localSummit">summit system</param>
+        /// <param name="message">What we are doing and where</param>
+        /// <param name="isTurnStimOn">true if turn stim on, false if turn stim off</param>
+        /// <returns>true if success false if not</returns>
+        private bool TurnStimOnorOff(SummitSystem localSummit, string message, bool isTurnStimOn)
+        {
+            bool success = false;
+            APIReturnInfo bufferReturnInfo;
+            _log.Info(message);
+            try
+            {
+                if (isTurnStimOn)
+                {
+                    bufferReturnInfo = localSummit.StimChangeTherapyOn();
+                    if (bufferReturnInfo.RejectCodeType == typeof(MasterRejectCode)
+                            && (MasterRejectCode)bufferReturnInfo.RejectCode == MasterRejectCode.ChangeTherapyPor)
+                    {
+                        _log.Info("Reset POR bit");
+                        ResetPOR(localSummit);
+                        try
+                        {
+                            _log.Info("Turn stim therapy on after reset");
+                            bufferReturnInfo = localSummit.StimChangeTherapyOn();
+                            if (CheckForReturnError(bufferReturnInfo, localSummit, "Turn Stim Therapy On", false))
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                return true;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            _log.Error(e);
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    bufferReturnInfo = localSummit.StimChangeTherapyOff(false);
+                }
+                Messages.Add(message);
+                if (!CheckForReturnError(bufferReturnInfo, localSummit, message, false))
+                {
+                    success = true;
+                }
+            }
+            catch(Exception e)
+            {
+                _log.Error(e);
+            }
+            return success;
+        }
+        private bool WriteAdaptiveMode(SummitSystem localSummit, string message, AdaptiveTherapyModes mode)
+        {
+            bool success = false;
+            APIReturnInfo bufferReturnInfo;
+            _log.Info(message);
+            try
+            {
+                bufferReturnInfo = localSummit.WriteAdaptiveMode(mode);
+                Messages.Add(message);
+                if (!CheckForReturnError(bufferReturnInfo, localSummit, message, false))
+                {
+                    success = true;
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error(e);
+            }
+            return success;
+        }
+        private bool WriteAdaptiveClearSettings(SummitSystem localSummit, string message, AdaptiveClearTypes type)
+        {
+            bool success = false;
+            APIReturnInfo bufferReturnInfo;
+            _log.Info(message);
+            try
+            {
+                bufferReturnInfo = localSummit.WriteAdaptiveClearSettings(type, 0);
+                Messages.Add(message);
+                if (!CheckForReturnError(bufferReturnInfo, localSummit, message, false))
+                {
+                    success = true;
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error(e);
+            }
+            return success;
+        }
+        private bool WriteAdaptiveDeltas(SummitSystem localSummit, string message, AdaptiveDeltas[] deltas)
+        {
+            bool success = false;
+            APIReturnInfo bufferReturnInfo;
+            _log.Info(message);
+            try
+            {
+                bufferReturnInfo = localSummit.WriteAdaptiveDeltas(deltas);
+                Messages.Add(message);
+                if (!CheckForReturnError(bufferReturnInfo, localSummit, message, false))
+                {
+                    success = true;
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error(e);
+            }
+            return success;
+        }
+        private bool ChangeActiveGroup(SummitSystem localSummit, string message, ActiveGroup group)
+        {
+            bool success = false;
+            APIReturnInfo bufferReturnInfo;
+            _log.Info(message);
+            try
+            {
+                bufferReturnInfo = localSummit.StimChangeActiveGroup(group);
+                Messages.Add(message);
+                if (!CheckForReturnError(bufferReturnInfo, localSummit, message, false))
+                {
+                    success = true;
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error(e);
+            }
+            return success;
+        }
+        #endregion  
 
         #region Medtronic API for Adaptive
         /// <summary>
@@ -1338,26 +1790,30 @@ namespace SCBS.ViewModels
                 configLd.TerminationDuration = adaptiveConfig.Detection.LD0.TerminationDuration;
                 configLd.HoldoffTime = adaptiveConfig.Detection.LD0.HoldOffOnStartupTime;
                 configLd.BlankingDurationUponStateChange = adaptiveConfig.Detection.LD0.StateChangeBlankingUponStateChange;
-                // Set the weight vectors for the power inputs, since only one channel is used rest can be zero.
-                configLd.Features[0].WeightVector = adaptiveConfig.Detection.LD0.WeightVector[0];
-                configLd.Features[1].WeightVector = adaptiveConfig.Detection.LD0.WeightVector[1]; 
-                configLd.Features[2].WeightVector = adaptiveConfig.Detection.LD0.WeightVector[2]; 
-                configLd.Features[3].WeightVector = adaptiveConfig.Detection.LD0.WeightVector[3]; 
-                // Set the normalization vectors for the power inputs, since only one channel is used rest can be zero. 
-                configLd.Features[0].NormalizationMultiplyVector = adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[0];
-                configLd.Features[1].NormalizationMultiplyVector = adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[1];
-                configLd.Features[2].NormalizationMultiplyVector = adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[2];
-                configLd.Features[3].NormalizationMultiplyVector = adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[3];
-                // Set the normalization subtract vectors for the power inputs
-                configLd.Features[0].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[0];
-                configLd.Features[1].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[1];
-                configLd.Features[2].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[2];
-                configLd.Features[3].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[3];
-                // Set the thresholds
-                configLd.BiasTerm[0] = adaptiveConfig.Detection.LD0.B0;
-                configLd.BiasTerm[1] = adaptiveConfig.Detection.LD0.B1;
                 // Set the fixed point value
                 configLd.FractionalFixedPointValue = adaptiveConfig.Detection.LD0.FractionalFixedPointValue;
+                unchecked
+                {
+                    double FFVP = Math.Pow(2, adaptiveConfig.Detection.LD0.FractionalFixedPointValue);
+                    // Set the weight vectors for the power inputs, since only one channel is used rest can be zero.
+                    configLd.Features[0].WeightVector = (uint)(adaptiveConfig.Detection.LD0.WeightVector[0] * FFVP);
+                    configLd.Features[1].WeightVector = (uint)(adaptiveConfig.Detection.LD0.WeightVector[1] * FFVP);
+                    configLd.Features[2].WeightVector = (uint)(adaptiveConfig.Detection.LD0.WeightVector[2] * FFVP);
+                    configLd.Features[3].WeightVector = (uint)(adaptiveConfig.Detection.LD0.WeightVector[3] * FFVP);
+                    // Set the normalization vectors for the power inputs, since only one channel is used rest can be zero. 
+                    configLd.Features[0].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[0] * FFVP);
+                    configLd.Features[1].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[1] * FFVP);
+                    configLd.Features[2].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[2] * FFVP);
+                    configLd.Features[3].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD0.NormalizationMultiplyVector[3] * FFVP);
+                    // Set the normalization subtract vectors for the power inputs
+                    configLd.Features[0].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[0];
+                    configLd.Features[1].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[1];
+                    configLd.Features[2].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[2];
+                    configLd.Features[3].NormalizationSubtractVector = adaptiveConfig.Detection.LD0.NormalizationSubtractVector[3];
+                    // Set the thresholds
+                    configLd.BiasTerm[0] = (uint)(adaptiveConfig.Detection.LD0.B0 * FFVP);
+                    configLd.BiasTerm[1] = (uint)(adaptiveConfig.Detection.LD0.B1 * FFVP);
+                }
             }
             catch (Exception e)
             {
@@ -1430,26 +1886,30 @@ namespace SCBS.ViewModels
                 configLd.TerminationDuration = adaptiveConfig.Detection.LD1.TerminationDuration;
                 configLd.HoldoffTime = adaptiveConfig.Detection.LD1.HoldOffOnStartupTime;
                 configLd.BlankingDurationUponStateChange = adaptiveConfig.Detection.LD1.StateChangeBlankingUponStateChange;
-                // Set the weight vectors for the power inputs, since only one channel is used rest can be zero.
-                configLd.Features[0].WeightVector = adaptiveConfig.Detection.LD1.WeightVector[0];
-                configLd.Features[1].WeightVector = adaptiveConfig.Detection.LD1.WeightVector[1];
-                configLd.Features[2].WeightVector = adaptiveConfig.Detection.LD1.WeightVector[2];
-                configLd.Features[3].WeightVector = adaptiveConfig.Detection.LD1.WeightVector[3];
-                // Set the normalization vectors for the power inputs, since only one channel is used rest can be zero. 
-                configLd.Features[0].NormalizationMultiplyVector = adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[0];
-                configLd.Features[1].NormalizationMultiplyVector = adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[1];
-                configLd.Features[2].NormalizationMultiplyVector = adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[2];
-                configLd.Features[3].NormalizationMultiplyVector = adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[3];
-                // Set the normalization subtract vectors for the power inputs
-                configLd.Features[0].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[0];
-                configLd.Features[1].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[1];
-                configLd.Features[2].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[2];
-                configLd.Features[3].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[3];
-                // Set the thresholds
-                configLd.BiasTerm[0] = adaptiveConfig.Detection.LD1.B0;
-                configLd.BiasTerm[1] = adaptiveConfig.Detection.LD1.B1;
                 // Set the fixed point value
                 configLd.FractionalFixedPointValue = adaptiveConfig.Detection.LD1.FractionalFixedPointValue;
+                unchecked
+                {
+                    double FFVP = Math.Pow(2, adaptiveConfig.Detection.LD1.FractionalFixedPointValue);
+                    // Set the weight vectors for the power inputs, since only one channel is used rest can be zero.
+                    configLd.Features[0].WeightVector = (uint)(adaptiveConfig.Detection.LD1.WeightVector[0] * FFVP);
+                    configLd.Features[1].WeightVector = (uint)(adaptiveConfig.Detection.LD1.WeightVector[1] * FFVP);
+                    configLd.Features[2].WeightVector = (uint)(adaptiveConfig.Detection.LD1.WeightVector[2] * FFVP);
+                    configLd.Features[3].WeightVector = (uint)(adaptiveConfig.Detection.LD1.WeightVector[3] * FFVP);
+                    // Set the normalization vectors for the power inputs, since only one channel is used rest can be zero. 
+                    configLd.Features[0].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[0] * FFVP);
+                    configLd.Features[1].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[1] * FFVP);
+                    configLd.Features[2].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[2] * FFVP);
+                    configLd.Features[3].NormalizationMultiplyVector = (uint)(adaptiveConfig.Detection.LD1.NormalizationMultiplyVector[3] * FFVP);
+                    // Set the normalization subtract vectors for the power inputs
+                    configLd.Features[0].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[0];
+                    configLd.Features[1].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[1];
+                    configLd.Features[2].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[2];
+                    configLd.Features[3].NormalizationSubtractVector = adaptiveConfig.Detection.LD1.NormalizationSubtractVector[3];
+                    // Set the thresholds
+                    configLd.BiasTerm[0] = (uint)(adaptiveConfig.Detection.LD1.B0 * FFVP);
+                    configLd.BiasTerm[1] = (uint)(adaptiveConfig.Detection.LD1.B1 * FFVP);
+                }
             }
             catch (Exception e)
             {
@@ -1481,57 +1941,155 @@ namespace SCBS.ViewModels
         private bool WriteAdaptiveStates(AdaptiveModel adaptiveConfig, SummitSystem theSummit, bool turnErrorHandlingOn)
         {
             APIReturnInfo bufferReturnInfo;
-            try
+            if (adaptiveConfig.Adaptive.Program1 == null || adaptiveConfig.Adaptive.Rates == null)
             {
-                //For now, this just sets up state 0-2 and sets the other states at 25.5 which is the value to hold the current
-                AdaptiveState aState = new AdaptiveState();
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State0AmpInMilliamps;
-                aState.Prog1AmpInMilliamps = 0;
-                aState.Prog2AmpInMilliamps = 0;
-                aState.Prog3AmpInMilliamps = 0;
-                aState.RateTargetInHz = adaptiveConfig.Adaptive.Program0.RateTargetInHz; // Hold Rate
-                bufferReturnInfo = theSummit.WriteAdaptiveState(0, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State1AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(1, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State2AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(2, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State3AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(3, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State4AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(4, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State5AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(5, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State6AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(6, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State7AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(7, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
-                aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State8AmpInMilliamps;
-                bufferReturnInfo = theSummit.WriteAdaptiveState(8, aState);
-                if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
-                    return false;
+                try
+                {
+                    //For now, this just sets up state 0-2 and sets the other states at 25.5 which is the value to hold the current
+                    AdaptiveState aState = new AdaptiveState();
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State0AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = 0;
+                    aState.Prog2AmpInMilliamps = 0;
+                    aState.Prog3AmpInMilliamps = 0;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Program0.RateTargetInHz; // Hold Rate
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(0, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State1AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(1, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State2AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(2, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State3AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(3, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State4AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(4, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State5AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(5, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State6AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(6, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State7AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(7, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State8AmpInMilliamps;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(8, aState);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
 
+                }
+                catch (Exception e)
+                {
+                    _log.Error(e);
+                    return false;
+                }
             }
-            catch (Exception e)
+            else
             {
-                _log.Error(e);
-                return false;
+                try
+                {
+                    AdaptiveState aState = new AdaptiveState();
+                    //State 0
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State0AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State0AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State0AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State0AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State0.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(0, aState, adaptiveConfig.Adaptive.Rates.State0.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 1
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State1AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State1AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State1AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State1AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State1.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(1, aState, adaptiveConfig.Adaptive.Rates.State1.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 2
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State2AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State2AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State2AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State2AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State2.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(2, aState, adaptiveConfig.Adaptive.Rates.State2.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 3
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State3AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State3AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State3AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State3AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State3.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(3, aState, adaptiveConfig.Adaptive.Rates.State3.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 4
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State4AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State4AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State4AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State4AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State4.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(4, aState, adaptiveConfig.Adaptive.Rates.State4.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 5
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State5AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State5AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State5AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State5AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State5.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(5, aState, adaptiveConfig.Adaptive.Rates.State5.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 6
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State6AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State6AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State6AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State6AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State6.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(6, aState, adaptiveConfig.Adaptive.Rates.State6.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 7
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State7AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State7AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State7AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State7AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State7.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(7, aState, adaptiveConfig.Adaptive.Rates.State7.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    //State 8
+                    aState.Prog0AmpInMilliamps = adaptiveConfig.Adaptive.Program0.State8AmpInMilliamps;
+                    aState.Prog1AmpInMilliamps = adaptiveConfig.Adaptive.Program1.State8AmpInMilliamps;
+                    aState.Prog2AmpInMilliamps = adaptiveConfig.Adaptive.Program2.State8AmpInMilliamps;
+                    aState.Prog3AmpInMilliamps = adaptiveConfig.Adaptive.Program3.State8AmpInMilliamps;
+                    aState.RateTargetInHz = adaptiveConfig.Adaptive.Rates.State8.RateTargetInHz;
+                    bufferReturnInfo = theSummit.WriteAdaptiveState(8, aState, adaptiveConfig.Adaptive.Rates.State8.SenseFriendly);
+                    if (CheckForReturnError(bufferReturnInfo, theSummit, "Error Writing adaptive state", turnErrorHandlingOn))
+                        return false;
+                    _log.Info("Write Adaptive States success");
+                }
+                catch (Exception e)
+                {
+                    _log.Error(e);
+                    return false;
+                }
             }
+                
             return true;
         }
 
@@ -1567,7 +2125,7 @@ namespace SCBS.ViewModels
         /// Starts sensing and steaming
         /// </summary>
         /// <returns>true if success and false if not success</returns>
-        private bool StartSensingAndStreaming(bool turnErrorHandlingOn, SummitSystem localSummit, SenseModel senseModel)
+        private bool StartSensingAndStreaming(bool turnErrorHandlingOn, SummitSystem localSummit, SenseModel senseModel, AdaptiveModel adaptiveModel)
         {
             APIReturnInfo bufferReturnInfo;
             try
@@ -1578,7 +2136,7 @@ namespace SCBS.ViewModels
                     senseModel.SenseOptions.FFT,
                     senseModel.SenseOptions.Power,
                     senseModel.SenseOptions.LD0,
-                    senseModel.SenseOptions.LD1,
+                    adaptiveModel.Detection.LD1.IsEnabled,
                     senseModel.SenseOptions.AdaptiveState,
                     senseModel.SenseOptions.LoopRecording,
                     senseModel.SenseOptions.Unused), ConfigConversions.FFTChannelConvert(senseModel));
@@ -1624,7 +2182,7 @@ namespace SCBS.ViewModels
                 getTDSampleRate(localModel.Sense.TimeDomains[0].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[0].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[0].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[0].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[0].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[0].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[0].Hpf)));
@@ -1634,7 +2192,7 @@ namespace SCBS.ViewModels
                 getTDSampleRate(localModel.Sense.TimeDomains[1].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[1].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[1].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[1].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[1].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[1].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[1].Hpf)));
@@ -1644,7 +2202,7 @@ namespace SCBS.ViewModels
                 getTDSampleRate(localModel.Sense.TimeDomains[2].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[2].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[2].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[2].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[2].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[2].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[2].Hpf)));
@@ -1654,7 +2212,7 @@ namespace SCBS.ViewModels
                 getTDSampleRate(localModel.Sense.TimeDomains[3].IsEnabled, localModel),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[3].Inputs[0]),
                 ConfigConversions.TdMuxInputsConvert(localModel.Sense.TimeDomains[3].Inputs[1]),
-                TdEvokedResponseEnable.Standard,
+                ConfigConversions.TdEvokedResponseEnableConvert(localModel.Sense.TimeDomains[3].TdEvokedResponseEnable),
                 ConfigConversions.TdLpfStage1Convert(localModel.Sense.TimeDomains[3].Lpf1),
                 ConfigConversions.TdLpfStage2Convert(localModel.Sense.TimeDomains[3].Lpf2),
                 ConfigConversions.TdHpfsConvert(localModel.Sense.TimeDomains[3].Hpf)));
@@ -1665,7 +2223,7 @@ namespace SCBS.ViewModels
                 localModel.Sense.FFT.FftInterval,
                 ConfigConversions.FftWindowAutoLoadsConvert(localModel.Sense.FFT.WindowLoad),
                 localModel.Sense.FFT.WindowEnabled,
-                FftWeightMultiplies.Shift7,
+                ConfigConversions.FftWeightMultipliesConvert(localModel.Sense.FFT.WeightMultiplies),
                 localModel.Sense.FFT.StreamSizeBins,
                 localModel.Sense.FFT.StreamOffsetBins);
 
@@ -1737,6 +2295,7 @@ namespace SCBS.ViewModels
                 do
                 {
                     bufferReturnInfo = localSummit.LogCustomEvent(DateTime.Now, DateTime.Now, successLogMessage, DateTime.Now.ToString("MM_dd_yyyy hh:mm:ss tt"));
+                    counter--;
                 } while (bufferReturnInfo.RejectCode != 0 && counter > 0);
                 if (counter == 0)
                 {
@@ -2049,7 +2608,7 @@ namespace SCBS.ViewModels
             else
             {
                 _log.Warn("Error finding filepath for directory left");
-                DisplayMessageBox("Error finding filepath for directory... Please run switch again!");
+                DisplayMessageBox("Error finding filepath for directory to write sense and adaptive files to.");
                 return false;
             }
             if (filepathAdaptive != null && filepathSense != null)
@@ -2062,7 +2621,7 @@ namespace SCBS.ViewModels
             else
             {
                 _log.Warn("Error finding filepath for directory left");
-                DisplayMessageBox("Error finding filepath for directory... Please run switch again!");
+                DisplayMessageBox("Error finding filepath for directory... Please let researcher know");
                 return false;
             }
 
@@ -2074,7 +2633,7 @@ namespace SCBS.ViewModels
             else
             {
                 _log.Warn("Error writing file to directory left");
-                DisplayMessageBox("Error writing file to directory... Please run switch again!");
+                DisplayMessageBox("Error writing file to directory... Please let researcher know");
                 return false;
             }
             return true;
@@ -2096,7 +2655,7 @@ namespace SCBS.ViewModels
             else
             {
                 _log.Warn("Error finding filepath for directory right");
-                DisplayMessageBox("Error finding filepath for directory... Please run switch again!");
+                DisplayMessageBox("Error finding filepath for directory... Please let researcher know");
                 return false;
             }
             if (filepathAdaptive != null && filepathSense != null)
@@ -2109,7 +2668,7 @@ namespace SCBS.ViewModels
             else
             {
                 _log.Warn("Error finding filepath for directory right");
-                DisplayMessageBox("Error finding filepath for directory... Please run switch again!");
+                DisplayMessageBox("Error finding filepath for directory... Please let researcher know");
                 return false;
             }
 
@@ -2121,7 +2680,7 @@ namespace SCBS.ViewModels
             else
             {
                 _log.Warn("Error writing file to directory right");
-                DisplayMessageBox("Error writing file to directory... Please run switch again!");
+                DisplayMessageBox("Error writing file to directory... Please let researcher know");
                 return false;
             }
             return true;

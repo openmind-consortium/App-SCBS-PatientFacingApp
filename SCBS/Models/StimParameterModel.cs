@@ -14,12 +14,20 @@ namespace SCBS.Models
     class StimParameterModel
     {
         /// <summary>
+        /// Empty constructor
+        /// </summary>
+        public StimParameterModel()
+        {
+
+        }
+        /// <summary>
         /// Constructor to set values for stimulation data for pulse width, stim rate and stim amp
         /// </summary>
         /// <param name="pulsewidth">Sets the pulseWidth value</param>
         /// <param name="stimrate">Sets the stimRate value</param>
         /// <param name="stimamp">Sets the stimAmp value</param>
         /// <param name="electrodesStim">Sets the electrode that is stimming</param>
+        /// <param name="therapyElectrodes">Therapy electrodes</param>
         public StimParameterModel(string pulsewidth, string stimrate, string stimamp, string electrodesStim, TherapyElectrodes therapyElectrodes)
         {
             PulseWidth = pulsewidth;
@@ -27,6 +35,43 @@ namespace SCBS.Models
             StimAmp = stimamp;
             StimElectrodes = electrodesStim;
             TherapyElectrodes = therapyElectrodes;
+        }
+        /// <summary>
+        /// Constructor to set values for stimulation data for pulse width, stim rate and stim amp
+        /// </summary>
+        /// <param name="pulsewidth">Sets the pulseWidth value</param>
+        /// <param name="stimrate">Sets the stimRate value</param>
+        /// <param name="stimamp">Sets the stimAmp value</param>
+        /// <param name="electrodesStim">Sets the electrode that is stimming</param>
+        /// <param name="therapyElectrodes">Therapy electrodes</param>
+        /// <param name="therapyGroup">Therapy group with all settings</param>
+        public StimParameterModel(string pulsewidth, string stimrate, string stimamp, string electrodesStim, TherapyElectrodes therapyElectrodes, TherapyGroup therapyGroup)
+        {
+            PulseWidth = pulsewidth;
+            StimRate = stimrate;
+            StimAmp = stimamp;
+            StimElectrodes = electrodesStim;
+            TherapyElectrodes = therapyElectrodes;
+            TherapyGroup = therapyGroup;
+        }
+        /// <summary>
+        /// Constructor to set values for stimulation data for pulse width, stim rate and stim amp
+        /// </summary>
+        /// <param name="pulsewidth">Sets the pulseWidth value</param>
+        /// <param name="stimrate">Sets the stimRate value</param>
+        /// <param name="stimamp">Sets the stimAmp value</param>
+        /// <param name="electrodesStim">Sets the electrode that is stimming</param>
+        /// <param name="therapyElectrodes">Therapy electrodes</param>
+        /// <param name="therapyGroup">Therapy group with all settings</param>
+        public StimParameterModel(string pulsewidth, string stimrate, string stimamp, string electrodesStim, TherapyElectrodes therapyElectrodes, TherapyGroup therapyGroup, AmplitudeLimits ampLimits)
+        {
+            PulseWidth = pulsewidth;
+            StimRate = stimrate;
+            StimAmp = stimamp;
+            StimElectrodes = electrodesStim;
+            TherapyElectrodes = therapyElectrodes;
+            TherapyGroup = therapyGroup;
+            AmpLimits = ampLimits;
         }
         /// <summary>
         /// Pulse Width
@@ -48,5 +93,13 @@ namespace SCBS.Models
         /// Stim Electrodes in an array
         /// </summary>
         public TherapyElectrodes TherapyElectrodes { get; set; }
+        /// <summary>
+        /// Therapy group with all stim settings for group
+        /// </summary>
+        public TherapyGroup TherapyGroup { get; set; }
+        /// <summary>
+        /// Amplitude Limits
+        /// </summary>
+        public AmplitudeLimits AmpLimits { get; set; }
     }
 }

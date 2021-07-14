@@ -9,11 +9,13 @@ using System.Threading.Tasks;
 using System.Windows;
 using AutoUpdaterDotNET;
 using System.IO;
+using SciChart.Charting.Visuals;
 
 namespace SCBS
 {
     public class Bootstrapper : BootstrapperBase
     {
+        private string sciChartLicenseFileLocation = @"C:\SCBS\sciChartLicense.txt";
         public Bootstrapper()
         {
             LogManager.GetLog = type => new Log4netLogger(type);
@@ -27,6 +29,20 @@ namespace SCBS
         /// <param name="e"></param>
         protected override void OnStartup(object sender, StartupEventArgs e)
         {
+            //Get the scichart license from file
+            string sciChartLicense = null;
+            try
+            {
+                using (System.IO.StreamReader sr = new StreamReader(sciChartLicenseFileLocation))
+                {
+                    sciChartLicense = sr.ReadToEnd();
+                }
+                SciChartSurface.SetRuntimeLicenseKey(sciChartLicense);
+            }
+            catch
+            {
+                //MessageBox.Show(@"Error Importing SciChart License. Charts will not work without it. Please be sure it is located in the directory C:\SCBS\sciChartLicense.txt. Proceed if you don't need to use the charts.", "Warning", MessageBoxButton.OK, MessageBoxImage.Hand);
+            }
             //Get the file containing the url where the xml file is stored. 
             //Check xml file to see if the version has increased.  If so, download update and update application.
             string urlForAutoUpdateContainingXML = null;
@@ -68,7 +84,8 @@ namespace SCBS
         /// <param name="e"></param>
         protected override void OnExit(object sender, EventArgs e)
         {
-
+            MainViewModel window = new MainViewModel();
+            window.ExitButtonClick();
         }
     }
 }

@@ -3,12 +3,14 @@ using Medtronic.SummitAPI.Classes;
 using Medtronic.TelemetryM;
 using Medtronic.TelemetryM.CtmProtocol.Commands;
 using SCBS.Models;
+using SCBS.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace SCBS.Services
 {
@@ -18,6 +20,7 @@ namespace SCBS.Services
     /// </summary>
     public class ConnectLeft : Connect
     {
+        private bool hasShownMessageToUser = true;
         /// <summary>
         /// Connects to CTM starting from the Nth value of the list of CTM's and works its way to the 0th.  This considered the left in bilateral
         /// </summary>
@@ -72,11 +75,12 @@ namespace SCBS.Services
                     // Write out the result
                     _log.Info("Create Summit Result: " + connectReturn.ToString());
 
-                    // Break if it failed successful
+                    // Break if it was successful
                     if (tempSummit != null && connectReturn.HasFlag(ManagerConnectStatus.Success))
                     {
                         break;
                     }
+
                 }
             }
             catch (Exception e)
@@ -88,7 +92,11 @@ namespace SCBS.Services
             if (tempSummit == null)
             {
                 // inform user that CTM was not successfully connected to
-                _log.Warn("Failed to connect to CTM...");
+                if (hasShownMessageToUser)
+                {
+                    MainViewModel.ShowMessageBox("Could not connect to CTM. Check that CTM is placed correctly over INS on chest. If problem persists, please inform researcher of problem.", "Connection to CTM Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    hasShownMessageToUser = false;
+                }
                 return false;
             }
             else
