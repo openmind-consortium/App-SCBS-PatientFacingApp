@@ -13,41 +13,37 @@
 
 ### Introduction
 
-The main goal of this project is to provide a simple patient facing interface that will allow RC+S patients to easily stream neural data at home. This is important since developing any adaptive or “closed loop” protocol relies on both a large sample of training data and monitoring of algorithm performance. This should ideally occur in home setting over increasing timer periods. The current application does not change any parameters set on the INS (such as stim settings, stimulation group or sense settings) so long as the “Switch” functionality is turned off in the application_config.json file. Major parts of the code concern maintain a robust connection between the CTM and the INS. This includes automatic recovery of session connection both in cases in which the patient walks out of the room with computer or in which CTM/INS loose connectivity. Use of this code will allow continuous streaming during many activities of daily life and future versions will pair this recording with external monitors.
-
-Currently these are the main barriers that impact successful continuous streaming at home:
- 1. CTM battery life and “beeping”
- - CTM battery life on two AAA batteries is about 4-5 hours depending on settings. We have modified an external battery pack to plug into CTM. See plans here (TBD). With this addition, CTM can last > 50 hours.
- - The CTM beeps upon reconnection. This is very disruptive to sleep. We will need to submit an amendment to FDA to remove the speaker from the CTM.
- 2. INS battery life
- - This is the current limitation. We can stream 4 TD channels, including therapeutic stim for about ~35 hours before INS battery runs down to 5%.
-3. System bulk
- - Since system is based on windows based computers, it limits patient mobility with device. Currently, Surface Go’s and other small computers have been tested but different bluetooth chips perform differently so that this does not always work reliability. The only computer we have found consistently works is the
- - Microsoft Surface 4, we are looking into other computers as well and will update this list.
+The main goal of this project is to provide a simple patient facing interface that will allow RC+S patients to easily stream neural data at home. This is important since developing any adaptive or “closed loop” protocol relies on both a large sample of training data and monitoring of algorithm performance. This should ideally occur in home setting over increasing timer periods. The current application does not change any parameters set on the INS (such as stim settings, stimulation group or sense settings) so long as the “Switch” functionality and the Researcher tools are turned off in the application_config.json file. Major parts of the code concern maintain a robust connection between the CTM and the INS. This includes automatic recovery of session connection both in cases in which the patient walks out of the room with computer or in which CTM/INS loose connectivity. Use of this code will allow continuous streaming during many activities of daily life and future versions will pair this recording with external monitors.
  
- The SCBS will run in unilateral (single INS) mode which will only communicate and connect with one INS or bilateral (2 INS’ implanted) mode which will communicate and connect to 2 CTM/INS pairs.  The functionality will change the UI and functionality accordingly when the “bilateral” variable is changed to true/false in the application_config.json file. 
+ ### Application
+The SCBS will run in unilateral (single INS) mode which will only communicate and connect with one INS or bilateral (2 INS’ implanted) mode which will communicate and connect to 2 CTM/INS pairs.  The functionality will change the UI and functionality accordingly when the “bilateral” variable is changed to true/false in the application_config.json file. 
  
- #### Bilateral Start/Unconnected:
+  #### Patient Screen (researcher tools disabled):
+ ![](photos/PatientScreenNoResearchTools.PNG)
+ 
+ #### Bilateral Start/Unconnected (researcher tools enabled):
  ![](photos/NotConnected.PNG)
  
  #### Bilateral Connection:
  ![](photos/ConnectedBilateral.JPG)
 
-#### Unilateral Connection showing all buttons:
+#### Unilateral Connection:
 ![](photos/connected.PNG)
+
+#### Researcher Tools:
+![](photos/ResearchTools.PNG)
 
 #### Report Screen:
 ![](photos/reportScreen.PNG)
 There is a report window that allows the user/patient to report their symptoms/medications and additional comments and the time that this occurred.  This will log into the Medtronic Eventlog.json file.  This is useful for getting the state of the patient while they are streaming data.
 
-The UI has information about what group the patient is in, how long they have been streaming, the INS/CTM/laptop battery levels, and stimulation data.  If the “Switch” functionality is turned off then the patient will be able to see what group, mA and Hz they are at.  If the “Switch” functionality is off then the patient will be able to only see their group whether Adaptive therapy is on.  There is also a stream coloring that will show when there is an issue with streaming.  If the light is green then the patient is streaming and if it is gray or flashing to gray then the streaming has stopped or is cutting out, respectively.
+### Application Functionality Overview
+With the application_config.json file, you can customize the application to your needs. You can enable/disable most buttons, hide stim display settings, change unilateral/bilateral, or turn on certain functionalities on connection.  More about the application_config later in this readme.
 
-The SCBS is capable of making use of an “Align” functionality which will move from the current group to group B, then turn stim therapy on/off (based on what it is currently on), then on/off again, and then it will do that 2 more times leaving it in the original state stim therapy state that it was in originally.  Lastly, it will move it to group A.  The purpose of this is to align INS data points with artifacts.  When running in bilateral mode, the “align” will do this at almost the same time for both INS’ so that the clinician can have a sense of alignment between both INS’.  This will work as well in unilateral mode in case you need to add an artifact to the INS data to align to an outside device.
+#### Patient Screen Functionality
+The UI has information about what group the patient is in, how long they have been streaming, the INS/CTM/laptop battery levels, and stimulation data.  There is a stream coloring that will show when there is an issue with streaming.  If the light is green then the patient is streaming and if it is gray or flashing to gray then the streaming has stopped or is cutting out, respectively.
 
-Inside the application_config.json there is an option to turn on the option to collect the log data from the INS that gives the adaptive state changes.  This is the option GetAdaptiveLogInfo.  There is also the option to get the Mirror log data that is stored on the INS as well.  This will give you how many times and for how long the patient has been in each adaptive state.  The variable to change to turn that on is GetAdaptiveMirrorInfo.  Both files get written inside of the current streaming session directory where the Medtronic .json files are stored.  They are both written out in a plain text file.
-There is the ability to hide the report button and turn on the verbose logging for medtronic (which makes it easier for medtronic to debug issues). 
-
-New Session button may be turned on and allows the patient to start a new session directory.. This disconnects the ctm(s)/ins(') and reconnects them which creates a new session directory for the Medtronic .json files for a fresh new set of files. 
+There is an ability to turn on the option to collect the log data from the INS that gives the adaptive state changes.  This is the option GetAdaptiveLogInfo.  There is also the option to get the Mirror log data that is stored on the INS as well.  This will give you how many times and for how long the patient has been in each adaptive state.  The variable to change to turn that on is GetAdaptiveMirrorInfo.  There is also the option to GetEventLogInfo.  This allows you to get event related info such as group, therapy status, etc. All files get written inside of the current streaming session directory where the Medtronic .json files are stored.  They are all written out in a plain text file.  There is the ability to run this at startup each time a connection is made, or allow a button on the patient screen that allows them to run it whenever they click the button.
 
 There are 2 buttons that may be turned on to allow the user to open web pages. Each button's text may be edited along with each button's web page url. You can also force the user to be connected before they are able to open the web page.
 
@@ -55,11 +51,24 @@ There is ability to turn certain ctm beep noises on or off.  The most common set
 
 There is a button that may be turned on to allow the user to move to a specific group.  This is used to quickly move them into a safe group if they are running adaptive therapy or if you just want a button that moves them into a specified "safe" group that is preprogrammed with the RLP. The button text may be edited and each ins side may have a specific group assigned.
 
-Stim Sweep is a functionality that will allows the patient to run a preconfigured set of stim settings on the device.  There is a config file that will be used to adjust stim amp/pw/rate in a specified group and specified amount of time. 
-
 There is a Montage functionality that will allow the patient to run multiple sense files one after another while recording data.  This requires a re-connection if already connected due to changing the Mode to 4 for optimal bandwidth. The instructions for the montage are customizable and the clinician can add as many montage sense files as they would like.  The time for each montage run is also customizable. The patient will get a total time for the entire montage and when running will get a progress status and timer countdown until finished.
 
-Lastly there is the “Switch” functionality.  This is extremely important if you are trying to run a double-blind study and don’t want the patient to know if they are in adaptive or sham adaptive (open loop) mode.  The way this works is that there is a master switch config file that contains a list of adaptive config file names.  There is also an index corresponding to the current adaptive config file to run from the list.  When the patient clicks on the Switch button, the program will load the adaptive config file at the current index from the master switch config file.  This adaptive configuration will be configured on the patient’s INS.  If the patient is running in bilateral mode, then it will update both INS’ at the same time.  This requires that you have a separate directory for the other side with its own master config file and list of adaptive files.  Once the patient is finished updating their INS’, the current adaptive file(s) will be written into the current Medtronic session directory and the master config file(s) will be updated with the next index so that the next adaptive file can run the next time.  A cool feature is that you can turn on the ability to prevent the patient from running the switch functionality more that once in a specific amount of time.  This helps in case a patient forgets that they have already ran the switch for that day and try to run it again within the minimum time frame allowed by the clinician.  Turning on the feature is done by changing the WaitTimeIsEnabled to true and setting the WaitTimeInMinutes to the minimum number of minutes the patient must wait before being able to run Switch again.
+There is the “Switch” functionality.  This is extremely important if you are trying to run a double-blind study and don’t want the patient to know if they are in adaptive or sham adaptive (open loop) mode.  The way this works is that there is a master switch config file that contains a list of adaptive config file names.  There is also an index corresponding to the current adaptive config file to run from the list.  When the patient clicks on the Switch button, the program will load the adaptive config file at the current index from the master switch config file.  This adaptive configuration will be configured on the patient’s INS.  If the patient is running in bilateral mode, then it will update both INS’ at the same time.  This requires that you have a separate directory for the other side with its own master config file and list of adaptive files.  Once the patient is finished updating their INS’, the current adaptive file(s) will be written into the current Medtronic session directory and the master config file(s) will be updated with the next index so that the next adaptive file can run the next time.  A cool feature is that you can turn on the ability to prevent the patient from running the switch functionality more that once in a specific amount of time.  This helps in case a patient forgets that they have already ran the switch for that day and try to run it again within the minimum time frame allowed by the clinician.  Turning on the feature is done by changing the WaitTimeIsEnabled to true and setting the WaitTimeInMinutes to the minimum number of minutes the patient must wait before being able to run Switch again.
+
+There is the ability to run a Lead Integrity test on connection. This will run the monopolar and bipolar conctacts and print them in the medtronic EventLog.json file. There is also the ability to turn a button on for researchers to run it any time they would like in the Resarch Tools tab.
+
+There is the ability to hide the report button. You can hide all the button's from the user besides the Connect and Exit buttons. 
+
+#### Researcher Tools Screen Functionality (only available if Researcher tools flag is turned on in application_config.json)
+The researcher tools allow researchers to adjust the stimulation for the patient, change groups, turn therapy on/off and run other researcher tools with a click of the button. This works for unilateral or bilateral and will adjust the UI accordingly to each setting. When the rearcher tools flag is turned off in the application_config.json, then the patient will not have any access to this functionality or even know that it is there (it is hidden from them).
+
+The SCBS is capable of making use of an “Align” functionality which will move from the current group to group B, then turn stim therapy on/off (based on what it is currently on), then on/off again, and then it will do that 2 more times leaving it in the original state stim therapy state that it was in originally.  Lastly, it will move it to group A.  The purpose of this is to align INS data points with artifacts.  When running in bilateral mode, the “align” will do this at almost the same time for both INS’ so that the clinician can have a sense of alignment between both INS’.  This will work as well in unilateral mode in case you need to add an artifact to the INS data to align to an outside device.
+
+New Session button may be turned on and allows the researcher to start a new session directory.. This disconnects the ctm(s)/ins(') and reconnects them which creates a new session directory for the Medtronic .json files for a fresh new set of files. 
+
+Stim Sweep is a functionality that will allows the researcher to run a preconfigured set of stim settings on the device.  There is a config file that will be used to adjust stim amp/pw/rate in a specified group and specified amount of time. 
+
+FFT Viewer allows the researcher to visualize the FFT stream in real time.  You will need to get a SciChart licence for this to work. They are free for researchers.
 
 ## User Guide
 
@@ -70,7 +79,7 @@ In order to begin installation, you will need to follow the instructions in the 
 You will also need to setup Visual Studio.  The instructions for this can be found on page 24.  Setting up Visual Studio involves setting up the CPU and the .dll files for Medtronic.  
 
 ### Step 3: Config Files
-The program gets its configurations from .json files.  In order to run the program, you will need to add these configuration files into the correct directory locations and in the correct format.  
+The program gets its configurations from .json files.  In order to run the program, you will need to add these configuration files into the correct directory locations and in the correct format.  You may quickly copy all of the updated config files from here:  [Config Files](https://github.com/openmind-consortium/App-SCBS-PatientFacingApp/tree/master/SCBS/bin/x64/Release/Auto_Update_Report/current_config_files)
 
 #### Application Config
 The first config file is the application config file.  It needs to be in the directory C:\\SCBS\\application_config.json. The format for this is:
@@ -150,6 +159,8 @@ The first config file is the application config file.  It needs to be in the dir
 }
 ```
 - BasePathToJSONFiles is the base path where the medtronic json files will be written to. This should be the same as the SummitRegWithoutORCA.reg file on the line: "DataDirectory"="**C:\\\\ProgramData\\\\Medtronic ORCA**". This ensures that when the switch config files and the mirror log and event log files are written in the current session directory.
+- Researcher tools allow you to hide or show the researcher tools tab. This should be turned off for patient only use.
+- RunLeadIntegrityTestOnStartup set to true runs a lead integrity test on connection for patients.
 - Set bilateral to true if bilateral else false for unilateral
 - Switch, Montage and Stim Sweep to true if you would like the button to be present. 
 - Align if you would like to use the align functionality
@@ -160,6 +171,7 @@ The first config file is the application config file.  It needs to be in the dir
 - GetAdaptiveMirrorInfo if you would like to get how long and how many times a state has been entered (for embedded adaptive). This downloads automatically on initial connection.
 - Set LogBeepEvent to log an event into the Medtronic eventlog.json file any time the microphone hears a sound over a certain dB. You must plug your device into the mic before starting the program for it to register. This is good for aligning another task with the RC+S.
 - There is also the option to turn on different beeps for the CTM. Change any of the to true for that specific beep or None for no beep.
+- Move group shows or hides this button. The text is customizable along with the group to move to.
 - The WebPageButtons allows you to enable 2 different buttons or just one of the buttons at a time.  You can customize the button text and what web site it will take the user to. The user must be connected to their INS and CTM for the buttons to work.
 - LogDownloadButton allows you to get the onboard Adaptive log, the onboard Event log and/or the onboard mirror flash log. You can set the button text, if the button is visible or not and which onboard logs you would like to have the button press download.
 - StimDisplaySettings allows you to hide any stimulation settings from the user.
