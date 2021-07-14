@@ -60,7 +60,8 @@ There is the ability to run a Lead Integrity test on connection. This will run t
 There is the ability to hide the report button. You can hide all the button's from the user besides the Connect and Exit buttons. 
 
 #### Researcher Tools Screen Functionality (only available if Researcher tools flag is turned on in application_config.json)
-The researcher tools allow researchers to adjust the stimulation for the patient, change groups, turn therapy on/off and run other researcher tools with a click of the button. This works for unilateral or bilateral and will adjust the UI accordingly to each setting. When the rearcher tools flag is turned off in the application_config.json, then the patient will not have any access to this functionality or even know that it is there (it is hidden from them).
+The researcher tools allow researchers to adjust the stimulation for the patient, change groups, turn therapy on/off and run other researcher tools (explained below) with a click of the button. This works for unilateral or bilateral and will adjust the UI accordingly to each setting. When the rearcher tools flag is turned off in the application_config.json, then the patient will not have any access to this functionality or even know that it is there (it is hidden from them).
+Note- if the researcher is adjust stim settings, there is a setting from the dropdown menu named Both when running bilaterally. This will adjust the setting on the left device followed automatically by the right device. You may also just choose to adjust the Left or Right devices separately.
 
 The SCBS is capable of making use of an “Align” functionality which will move from the current group to group B, then turn stim therapy on/off (based on what it is currently on), then on/off again, and then it will do that 2 more times leaving it in the original state stim therapy state that it was in originally.  Lastly, it will move it to group A.  The purpose of this is to align INS data points with artifacts.  When running in bilateral mode, the “align” will do this at almost the same time for both INS’ so that the clinician can have a sense of alignment between both INS’.  This will work as well in unilateral mode in case you need to add an artifact to the INS data to align to an outside device.
 
@@ -69,6 +70,10 @@ New Session button may be turned on and allows the researcher to start a new ses
 Stim Sweep is a functionality that will allows the researcher to run a preconfigured set of stim settings on the device.  There is a config file that will be used to adjust stim amp/pw/rate in a specified group and specified amount of time. 
 
 FFT Viewer allows the researcher to visualize the FFT stream in real time.  You will need to get a SciChart licence for this to work. They are free for researchers.
+
+Update Sense button will reload the sense files for left and if bilateral, right sense_config files. The button will disable while loading and reenable when finished. Streaming will automatically restart.
+
+If you hover your mouse over the stim display settings, it will read out the upper and lower limits for of the amp, rate and pulse width.
 
 ## User Guide
 
@@ -158,7 +163,7 @@ The first config file is the application config file.  It needs to be in the dir
 	}
 }
 ```
-- BasePathToJSONFiles is the base path where the medtronic json files will be written to. This should be the same as the SummitRegWithoutORCA.reg file on the line: "DataDirectory"="**C:\\\\ProgramData\\\\Medtronic ORCA**". This ensures that when the switch config files and the mirror log and event log files are written in the current session directory.
+- BasePathToJSONFiles is the base path where the medtronic json files will be written to. This should be the same as the SummitRegWithoutORCA.reg file on the line: "DataDirectory"="**C:\\\\ProgramData\\\\Medtronic ORCA**". This is very important to get correct so that it ensures that the switch config files and the mirror log and event log files are written in the current session directory. 
 - Researcher tools allow you to hide or show the researcher tools tab. This should be turned off for patient only use.
 - RunLeadIntegrityTestOnStartup set to true runs a lead integrity test on connection for patients.
 - Set bilateral to true if bilateral else false for unilateral
@@ -647,6 +652,20 @@ The format for the stim sweep:
 	"EventMarkerDelayTimeInMilliSeconds": 500,
 	"CurrentIndex": 0
 }
+```
+
+### Add SciChart Licnese (required to use the FFT Visualizer)
+In order to use the graph, you need a SciChart License.  They provide free academic licenses through their website: https://www.scichart.com/educational-discount-programme/. You may also buy one as well.  The license file is a plain .txt file also located in the directory *C:\SCBS* with the name sciChartLicense.txt.  The sciChartLicense template file is:
+```
+<LicenseContract>
+<Customer>your customer name here</Customer>
+<OrderId>EDUCATIONAL-USE-0094</OrderId>
+<LicenseCount>1</LicenseCount>
+<IsTrialLicense>false</IsTrialLicense>
+<SupportExpires>06/11/2019 00:00:00</SupportExpires>
+<ProductCode>SC-WPF-SDK-PRO</ProductCode>
+<KeyCode>your keyCode goes here</KeyCode>
+</LicenseContract>
 ```
 
 ### Step 4: Auto-Updater (optional)
