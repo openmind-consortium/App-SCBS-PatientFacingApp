@@ -17,11 +17,11 @@
 		"Unused": false
 	},
 	"StreamEnables": {
-		"comment": "lets you set what to stream",
+		"comment": "lets you set what to stream. AdaptiveTherapy is LD detector events, TimeStamp is  Time-Sync and EventMarker is LoopRecordMarkerEcho in Medtronic API Docs",
 		"TimeDomain": true,
 		"FFT": false,
 		"Power": true,
-		"Accelerometry": false,
+		"Accelerometry": true,
 		"AdaptiveTherapy": true,
 		"AdaptiveState": true,
 		"EventMarker": true,
@@ -78,7 +78,7 @@
 			}
 		],
 		"FFT": {
-			"commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and time domain must be enabled for that channel, WeightMultiplies can be shift: 0-7",
+			"commentFFTParameters": "FFT Size can be: 64, 256, or 1024 samples, Hanning window load can be: 25, 50, or 100 (%), channel is for the fft channel must be between 0-3 and VERY IMPORTANT the time domain channel must be enabled for the same fft channel, WeightMultiplies is the BandFormation and can be shift: 0-7",
 			"Channel": 0,
 			"FftSize": 256,
 			"FftInterval": 100,

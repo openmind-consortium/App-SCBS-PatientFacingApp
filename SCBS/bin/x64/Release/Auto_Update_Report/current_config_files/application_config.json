@@ -34,8 +34,8 @@
 		"WebPageTwoButtonText": "Different Website Here"
 	},
 	"MoveGroupButton": {
-		"comment": "Allows you to move a specified group. GroupToMoveTo must be in format 'A', 'B', etc.  If a single INS, then use GroupToMoveToLeftUnilateral regardless of left or right",
-		"MoveGroupButtonText": "Adaptive OFF",
+		"comment": "Allows you to move a specified group. GroupToMoveTo must use double quotes around A, B, etc.  If a single INS, then use GroupToMoveToLeftUnilateral regardless of left or right",
+		"MoveGroupButtonText": "Move Group",
 		"MoveGroupButtonEnabled": true,
 		"GroupToMoveToLeftUnilateral": "B",
 		"GroupToMoveToRight": "B"

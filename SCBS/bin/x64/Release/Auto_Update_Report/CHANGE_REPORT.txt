@@ -1,3 +1,7 @@
+7/15/2021 VERSION 2.1.0.3
+Bug fix: BandFormation WeightMultiplies default value now set to 7 if parameter not included in sense config file.
+Update: Set default config values and improved the comments for confusing parameters.
+
 6/3/2021 VERSION 2.1.0.2
 Change Lead Integrity message wording
 
