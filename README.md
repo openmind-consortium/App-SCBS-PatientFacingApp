@@ -1,4 +1,4 @@
-# SCBS
+# SCBS (Summit Continuous Bilateral Streaming)
 
 ## README
 
