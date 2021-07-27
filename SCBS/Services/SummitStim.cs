@@ -303,7 +303,12 @@ namespace SCBS.Services
                             Thread.Sleep(400);
                         }
                         counter--;
-                    } while ((bufferReturnInfo.RejectCode != 0) && counter > 0);
+                    } while ((bufferReturnInfo.RejectCode != 0) && (bufferReturnInfo.RejectCode != 5) && counter > 0);
+                    //Sense friendly rate not found, just return back original value
+                    if (bufferReturnInfo.RejectCode == 5)
+                    {
+                        return Tuple.Create(true, (double?)currentRateValue, "Success");
+                    }
                     if ((bufferReturnInfo.RejectCode != 0) && counter == 0)
                     {
                         _log.Warn(":: Error: Medtronic API return error changing stim rate to value: " + bufferReturnInfo.Descriptor + ". Reject Code: " + bufferReturnInfo.RejectCode);

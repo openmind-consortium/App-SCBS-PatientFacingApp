@@ -773,6 +773,9 @@ namespace SCBS.Models
                                 'RunLeadIntegrityTestOnStartup': {
                                   'type': 'boolean'
                                 },
+                                'PatientStimControl': {
+                                  'type': 'boolean'
+                                },
                                 'Bilateral': {
                                   'type': 'boolean'
                                 },
@@ -1118,6 +1121,490 @@ namespace SCBS.Models
                                       }
                                     }";
 
+        private string patientStimControlSchema = @"{
+                                  'type': 'object',
+                                  'required': [],
+                                  'properties': {
+                                    'comment': {
+                                      'type': 'string'
+                                    },
+                                    'HideStimOnButton': {
+                                      'type': 'boolean'
+                                    },
+                                    'HideStimOffButton': {
+                                      'type': 'boolean'
+                                    },
+                                    'Card1': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'comment': {
+                                          'type': 'string'
+                                        },
+                                        'HideCard': {
+                                          'type': 'boolean'
+                                        },
+                                        'Group': {
+                                          'type': 'string'
+                                        },
+                                        'CustomText': {
+                                          'type': 'string'
+                                        },
+                                        'DisplaySettings': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'HideGroupDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideSiteDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideAmpDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideRateDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HidePulseWidthDisplay': {
+                                              'type': 'boolean'
+                                            }
+                                          }
+                                        },
+                                        'StimControl': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'StimControlType': {
+                                              'type': 'number'
+                                            },
+                                            'HideCurrentValue': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideCurrentValueUnits': {
+                                              'type': 'boolean'
+                                            },
+                                            'Program': {
+                                              'type': 'number'
+                                            },
+                                            'Amp': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetAmp': {
+                                                  'type': 'number'
+                                                },
+                                                'AmpValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            'Rate': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetRate': {
+                                                  'type': 'number'
+                                                },
+                                                'RateValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'PulseWidth': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetPulseWidth': {
+                                                  'type': 'number'
+                                                },
+                                                'PulseWidthValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    'Card2': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'comment': {
+                                          'type': 'string'
+                                        },
+                                        'HideCard': {
+                                          'type': 'boolean'
+                                        },
+                                        'Group': {
+                                          'type': 'string'
+                                        },
+                                        'CustomText': {
+                                          'type': 'string'
+                                        },
+                                        'DisplaySettings': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'HideGroupDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideSiteDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideAmpDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideRateDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HidePulseWidthDisplay': {
+                                              'type': 'boolean'
+                                            }
+                                          }
+                                        },
+                                        'StimControl': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'StimControlType': {
+                                              'type': 'number'
+                                            },
+                                            'HideCurrentValue': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideCurrentValueUnits': {
+                                              'type': 'boolean'
+                                            },
+                                            'Program': {
+                                              'type': 'number'
+                                            },
+                                            'Amp': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetAmp': {
+                                                  'type': 'number'
+                                                },
+                                                'AmpValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            'Rate': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetRate': {
+                                                  'type': 'number'
+                                                },
+                                                'RateValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'PulseWidth': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetPulseWidth': {
+                                                  'type': 'number'
+                                                },
+                                                'PulseWidthValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    'Card3': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'comment': {
+                                          'type': 'string'
+                                        },
+                                        'HideCard': {
+                                          'type': 'boolean'
+                                        },
+                                        'Group': {
+                                          'type': 'string'
+                                        },
+                                        'CustomText': {
+                                          'type': 'string'
+                                        },
+                                        'DisplaySettings': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'HideGroupDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideSiteDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideAmpDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideRateDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HidePulseWidthDisplay': {
+                                              'type': 'boolean'
+                                            }
+                                          }
+                                        },
+                                        'StimControl': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'StimControlType': {
+                                              'type': 'number'
+                                            },
+                                            'HideCurrentValue': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideCurrentValueUnits': {
+                                              'type': 'boolean'
+                                            },
+                                            'Program': {
+                                              'type': 'number'
+                                            },
+                                            'Amp': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetAmp': {
+                                                  'type': 'number'
+                                                },
+                                                'AmpValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            'Rate': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetRate': {
+                                                  'type': 'number'
+                                                },
+                                                'RateValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'PulseWidth': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetPulseWidth': {
+                                                  'type': 'number'
+                                                },
+                                                'PulseWidthValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    'Card4': {
+                                      'type': 'object',
+                                      'required': [],
+                                      'properties': {
+                                        'comment': {
+                                          'type': 'string'
+                                        },
+                                        'HideCard': {
+                                          'type': 'boolean'
+                                        },
+                                        'Group': {
+                                          'type': 'string'
+                                        },
+                                        'CustomText': {
+                                          'type': 'string'
+                                        },
+                                        'DisplaySettings': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'HideGroupDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideSiteDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideAmpDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideRateDisplay': {
+                                              'type': 'boolean'
+                                            },
+                                            'HidePulseWidthDisplay': {
+                                              'type': 'boolean'
+                                            }
+                                          }
+                                        },
+                                        'StimControl': {
+                                          'type': 'object',
+                                          'required': [],
+                                          'properties': {
+                                            'comment': {
+                                              'type': 'string'
+                                            },
+                                            'StimControlType': {
+                                              'type': 'number'
+                                            },
+                                            'HideCurrentValue': {
+                                              'type': 'boolean'
+                                            },
+                                            'HideCurrentValueUnits': {
+                                              'type': 'boolean'
+                                            },
+                                            'Program': {
+                                              'type': 'number'
+                                            },
+                                            'Amp': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetAmp': {
+                                                  'type': 'number'
+                                                },
+                                                'AmpValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            'Rate': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetRate': {
+                                                  'type': 'number'
+                                                },
+                                                'RateValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                },
+                                                'SenseFriendly': {
+                                                  'type': 'boolean'
+                                                }
+                                              }
+                                            },
+                                            'PulseWidth': {
+                                              'type': 'object',
+                                              'required': [],
+                                              'properties': {
+                                                'comment': {
+                                                  'type': 'string'
+                                                },
+                                                'TargetPulseWidth': {
+                                                  'type': 'number'
+                                                },
+                                                'PulseWidthValues': {
+                                                  'type': 'array',
+                                                  'items': {
+                                                    'type': 'number'
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+}";
+
         /// <summary>
         /// Gets the Schema for Sense
         /// </summary>
@@ -1179,6 +1666,15 @@ namespace SCBS.Models
         public string GetStimSweepSchema()
         {
             return stimSweepSchema;
+        }
+
+        /// <summary>
+        /// Gets the Schema for Patient Stim Control
+        /// </summary>
+        /// <returns>string that correlates to the patient stim control schema</returns>
+        public string GetPatientStimControlSchema()
+        {
+            return patientStimControlSchema;
         }
     }
 }

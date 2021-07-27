@@ -3,6 +3,7 @@
 	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
 	"TurnOnResearcherTools": false,
 	"RunLeadIntegrityTestOnStartup": false,
+	"PatientStimControl": false,
 	"Bilateral": true,
 	"Switch": true,
 	"Align": true,

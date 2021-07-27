@@ -251,7 +251,7 @@ namespace SCBS.ViewModels
                     {
                         try
                         {
-                            if (!summitSensing.SummitConfigureSensing(theSummitLeft, senseLeftConfigModel, true))
+                           if (!summitSensing.SummitConfigureSensing(theSummitLeft, senseLeftConfigModel, true))
                             {
                                 _log.Info("Could not configure sensing in Left");
                                 counter--;
@@ -1028,17 +1028,14 @@ namespace SCBS.ViewModels
         {
             TurnCTMYellowLeft();
             TurnINSGrayLeft();
-            CTMLeftBatteryLevel = "Connecting";
             if (!connectLeft.ConnectCTM(theSummitManager, ref theSummitLeft, senseLeftConfigModel, appConfigModel, _log))
             {
                 return false;
             }
             else
             {
-                CTMLeftBatteryLevel = "Connected";
                 TurnCTMGreenLeft();
                 TurnINSYellowLeft();
-                INSLeftBatteryLevel = "Connecting";
             }
             if(!connectLeft.ConnectINS(ref theSummitLeft, _log))
             {
@@ -1047,7 +1044,6 @@ namespace SCBS.ViewModels
             else
             {
                 TurnINSGreenLeft();
-                INSLeftBatteryLevel = "Connected";
             }
             return true;
         }
@@ -1055,17 +1051,14 @@ namespace SCBS.ViewModels
         {
             TurnCTMYellowRight();
             TurnINSGrayRight();
-            CTMRightBatteryLevel = "Connecting";
             if (!connectRight.ConnectCTM(theSummitManager, ref theSummitRight, senseRightConfigModel, appConfigModel, _log))
             {
                 return false;
             }
             else
             {
-                CTMRightBatteryLevel = "Connected";
                 TurnCTMGreenRight();
                 TurnINSYellowRight();
-                INSRightBatteryLevel = "Connecting";
             }
             if (!connectRight.ConnectINS(ref theSummitRight, _log))
             {
@@ -1074,7 +1067,6 @@ namespace SCBS.ViewModels
             else
             {
                 TurnINSGreenRight();
-                INSRightBatteryLevel = "Connected";
             }
             return true;
         }

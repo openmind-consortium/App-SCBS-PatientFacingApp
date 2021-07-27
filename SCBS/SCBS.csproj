@@ -194,6 +194,7 @@
     <Compile Include="Models\AppModel.cs" />
     <Compile Include="Models\MasterSwitchModel.cs" />
     <Compile Include="Models\MontageModel.cs" />
+    <Compile Include="Models\PatientStimControlModel.cs" />
     <Compile Include="Models\PowerBandModel.cs" />
     <Compile Include="Models\ReportModel.cs" />
     <Compile Include="Models\SchemaModel.cs" />
@@ -220,6 +221,7 @@
     <Compile Include="ViewModels\MainImplementationViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\MontageViewModel.cs" />
+    <Compile Include="ViewModels\PatientStimControlViewModel.cs" />
     <Compile Include="ViewModels\RecordVideoViewModel.cs" />
     <Compile Include="ViewModels\ReportWindowViewModel.cs" />
     <Compile Include="ViewModels\ResearcherToolsViewModel.cs" />
@@ -233,6 +235,9 @@
     </Compile>
     <Compile Include="Views\MontageView.xaml.cs">
       <DependentUpon>MontageView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PatientStimControlView.xaml.cs">
+      <DependentUpon>PatientStimControlView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\RecordVideoView.xaml.cs">
       <DependentUpon>RecordVideoView.xaml</DependentUpon>
@@ -288,6 +293,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\MontageView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PatientStimControlView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

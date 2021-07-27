@@ -1,0 +1,149 @@
+{
+	"comment": "Patient Stim Control using cards.  You may use 0 cards or up to 4 cards at one time. Patient may control either amp, rate or pulse width within each card. Stim display settings can be hidden for each card.",
+	"HideStimOnButton": false,
+	"HideStimOffButton": false,
+	"Card1": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "A",
+		"CustomText": "Amp Change",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 0,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 2,
+				"AmpValues": [0.2, 0.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 120,
+				"RateValues": [100, 120, 129.9],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 80]
+			}
+		}
+	},
+	"Card2": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "A",
+		"CustomText": "Rate Change",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 1,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 0.2,
+				"AmpValues": [0, 0.5, 1, 1.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 130,
+				"RateValues": [100, 115, 130],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 80]
+			}
+		}
+	},
+	"Card3": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "A",
+		"CustomText": "PW Change",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 2,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 0,
+				"AmpValues": [0, 0.5, 1, 1.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 125,
+				"RateValues": [100, 120, 129.9],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 70]
+			}
+		}
+	},
+	"Card4": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "A",
+		"CustomText": "No Changes",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 3,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 0.4,
+				"AmpValues": [0, 0.5, 1, 1.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 115,
+				"RateValues": [100, 120, 129.9],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 80]
+			}
+		}
+	}
+}

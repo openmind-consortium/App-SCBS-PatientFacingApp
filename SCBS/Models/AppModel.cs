@@ -24,6 +24,10 @@ namespace SCBS.Models
         /// </summary>
         public bool RunLeadIntegrityTestOnStartup { get; set; }
         /// <summary>
+        /// Set to true for patient stim control button to be visible.
+        /// </summary>
+        public bool PatientStimControl { get; set; }
+        /// <summary>
         /// Set to true if bilateral or false if unilateral
         /// </summary>
         public bool Bilateral { get; set; }

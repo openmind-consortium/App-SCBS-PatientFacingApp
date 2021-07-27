@@ -74,6 +74,32 @@ namespace SCBS.Models
             AmpLimits = ampLimits;
         }
         /// <summary>
+        /// Constructor to set values for stimulation data for pulse width, stim rate and stim amp
+        /// </summary>
+        /// <param name="pulsewidth">Sets the pulseWidth value</param>
+        /// <param name="stimrate">Sets the stimRate value</param>
+        /// <param name="stimamp">Sets the stimAmp value</param>
+        /// <param name="electrodesStim">Sets the electrode that is stimming</param>
+        /// <param name="therapyElectrodes">Therapy electrodes</param>
+        /// <param name="therapyGroup">Therapy group with all settings</param>
+        /// <param name="ampLimits">Amp Limits</param>
+        /// <param name="rateValue">Rate value as double</param>
+        /// <param name="ampValue">Amp value as double</param>
+        /// <param name="pwValue">Pulse width value as double</param>
+        public StimParameterModel(string pulsewidth, string stimrate, string stimamp, string electrodesStim, TherapyElectrodes therapyElectrodes, TherapyGroup therapyGroup, AmplitudeLimits ampLimits, double rateValue, double ampValue, int pwValue)
+        {
+            PulseWidth = pulsewidth;
+            StimRate = stimrate;
+            StimAmp = stimamp;
+            StimElectrodes = electrodesStim;
+            TherapyElectrodes = therapyElectrodes;
+            TherapyGroup = therapyGroup;
+            AmpLimits = ampLimits;
+            StimAmpValue = ampValue;
+            StimRateValue = rateValue;
+            PulseWidthValue = pwValue;
+        }
+        /// <summary>
         /// Pulse Width
         /// </summary>
         public string PulseWidth { get; set; }
@@ -85,6 +111,18 @@ namespace SCBS.Models
         /// Stim amp in mA
         /// </summary>
         public string StimAmp { get; set; }
+        /// <summary>
+        /// Pulse Width
+        /// </summary>
+        public int PulseWidthValue { get; set; }
+        /// <summary>
+        /// Stim rate in Hz
+        /// </summary>
+        public double StimRateValue { get; set; }
+        /// <summary>
+        /// Stim amp in mA
+        /// </summary>
+        public double StimAmpValue { get; set; }
         /// <summary>
         /// Stim Electrodes
         /// </summary>

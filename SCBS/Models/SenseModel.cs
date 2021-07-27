@@ -247,7 +247,7 @@ namespace SCBS.Models
         /// <summary>
         /// WeightMultiplies shift 0-7
         /// </summary>
-        public uint WeightMultiplies { get; set; }
+        public uint WeightMultiplies { get; set; } = 7;
     }
     /// <summary>
     /// Power Object

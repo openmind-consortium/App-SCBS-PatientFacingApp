@@ -112,8 +112,10 @@ namespace SCBS.ViewModels
         private int _currentProgress = 0;
         private Visibility _progressVisibility = Visibility.Collapsed;
         private Visibility _tabVisibility = Visibility.Collapsed;
+        private Visibility _beepEnabledVisibility = Visibility.Collapsed;
         private string _progressText = "";
-        private bool _webPageOneButtonEnabled, _webPageTwoButtonEnabled, _montageButtonEnabled, _stimSweepButtonEnabled, _newSessionButtonEnabled, _moveGroupButtonEnabled, _downloadLogButtonVisible;
+        private bool _webPageOneButtonEnabled, _webPageTwoButtonEnabled, _montageButtonEnabled, _stimSweepButtonEnabled, 
+            _newSessionButtonEnabled, _moveGroupButtonEnabled, _downloadLogButtonVisible, _patientStimControlButtonVisible;
         private string _webPageOneButtonText = "";
         private string _webPageTwoButtonText = "";
         private string _moveGroupButtonText = "";
@@ -177,6 +179,11 @@ namespace SCBS.ViewModels
                 {
                     return;
                 }
+            }
+
+            if (appConfigModel.PatientStimControl)
+            {
+                PatientStimControlButtonVisible = true;
             }
 
             //Show switch button and hide stim data such as amp and frequency. This is so patient doesn't know what amp or hz they are at
@@ -253,6 +260,7 @@ namespace SCBS.ViewModels
             //Initialize to listen for a beep noise.
             if (appConfigModel.LogBeepEvent)
             {
+                BeepEnabledVisibility = Visibility.Visible;
                 try
                 {
                     waveIn = new WaveIn();
@@ -373,6 +381,32 @@ namespace SCBS.ViewModels
 
 
         #region Button Clicks
+        /// <summary>
+        /// Opens window for patient stim change
+        /// </summary>
+        public void AdjustLeftPatientStim()
+        {
+            if (theSummitLeft == null || theSummitLeft.IsDisposed)
+            {
+                return;
+            }
+            WindowManager window = new WindowManager();
+            window.ShowDialog(new PatientStimControlViewModel(theSummitLeft, true, senseLeftConfigModel, _log), null, null);
+            UpdateStimStatusGroupLeft();
+        }
+        /// <summary>
+        /// Opens window for patient stim change
+        /// </summary>
+        public void AdjustRightPatientStim()
+        {
+            if (theSummitRight == null || theSummitRight.IsDisposed)
+            {
+                return;
+            }
+            WindowManager window = new WindowManager();
+            window.ShowDialog(new PatientStimControlViewModel(theSummitRight, false, senseRightConfigModel, _log), null, null);
+            UpdateStimStatusGroupRight();
+        }
         /// <summary>
         /// Downloads the mirror and application log files
         /// </summary>
@@ -2992,6 +3026,18 @@ namespace SCBS.ViewModels
 
         #region UI Binding Elements
         /// <summary>
+        /// Determines if the patient stim control button is visible or hidden
+        /// </summary>
+        public bool PatientStimControlButtonVisible
+        {
+            get { return _patientStimControlButtonVisible; }
+            set
+            {
+                _patientStimControlButtonVisible = value;
+                NotifyOfPropertyChange(() => PatientStimControlButtonVisible);
+            }
+        }
+        /// <summary>
         /// Text for the application name and version
         /// </summary>
         public string ApplicationTitleText
@@ -3013,6 +3059,18 @@ namespace SCBS.ViewModels
             {
                 _windowStyleForMainWindow = value;
                 NotifyOfPropertyChange(() => WindowStyleForMainWindow);
+            }
+        }
+        /// <summary>
+        /// Sets visiblity for the beep enables display
+        /// </summary>
+        public Visibility BeepEnabledVisibility
+        {
+            get { return _beepEnabledVisibility; }
+            set
+            {
+                _beepEnabledVisibility = value;
+                NotifyOfPropertyChange(() => BeepEnabledVisibility);
             }
         }
         /// <summary>
@@ -3624,7 +3682,7 @@ namespace SCBS.ViewModels
         /// </summary>
         public string CTMLeftBatteryLevel
         {
-            get { return _CTMLeftBatteryLevel ?? (_CTMLeftBatteryLevel = "Not Connected"); }
+            get { return _CTMLeftBatteryLevel ?? (_CTMLeftBatteryLevel = "%"); }
             set
             {
                 _CTMLeftBatteryLevel = value;
@@ -3636,7 +3694,7 @@ namespace SCBS.ViewModels
         /// </summary>
         public string CTMRightBatteryLevel
         {
-            get { return _CTMRightBatteryLevel ?? (_CTMRightBatteryLevel = "Not Connected"); }
+            get { return _CTMRightBatteryLevel ?? (_CTMRightBatteryLevel = "%"); }
             set
             {
                 _CTMRightBatteryLevel = value;
@@ -3648,7 +3706,7 @@ namespace SCBS.ViewModels
         /// </summary>
         public string INSLeftBatteryLevel
         {
-            get { return _INSLeftBatteryLevel ?? (_INSLeftBatteryLevel = "Not Connected"); }
+            get { return _INSLeftBatteryLevel ?? (_INSLeftBatteryLevel = "%"); }
             set
             {
                 _INSLeftBatteryLevel = value;
@@ -3660,7 +3718,7 @@ namespace SCBS.ViewModels
         /// </summary>
         public string INSRightBatteryLevel
         {
-            get { return _INSRightBatteryLevel ?? (_INSRightBatteryLevel = "Not Connected"); }
+            get { return _INSRightBatteryLevel ?? (_INSRightBatteryLevel = "%"); }
             set
             {
                 _INSRightBatteryLevel = value;
@@ -4038,8 +4096,8 @@ namespace SCBS.ViewModels
             TurnCTMGrayLeft();
             TurnINSGrayLeft();
             TurnStreamingGrayLeft();
-            CTMLeftBatteryLevel = "Not Connected";
-            INSLeftBatteryLevel = "Not Connected";
+            CTMLeftBatteryLevel = "%";
+            INSLeftBatteryLevel = "%";
             ActiveGroupLeft = "";
             StimStateLeft = "";
             StimAmpLeft = "";
@@ -4052,8 +4110,8 @@ namespace SCBS.ViewModels
             TurnCTMGrayRight();
             TurnINSGrayRight();
             TurnStreamingGrayRight();
-            CTMRightBatteryLevel = "Not Connected";
-            INSRightBatteryLevel = "Not Connected";
+            CTMRightBatteryLevel = "%";
+            INSRightBatteryLevel = "%";
             ActiveGroupRight = "";
             StimStateRight = "";
             StimAmpRight = "";

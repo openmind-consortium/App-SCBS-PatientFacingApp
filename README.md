@@ -3,20 +3,25 @@
 ## README
 
  ### Video Tutorials
- [SCBS Setup Walkthrough](https://ucsf.box.com/s/i5eqns3jiiwsqcrliqtpfybophwwmg4j)
+Please click on the link below to view the tutorial video in your web browser. You can also download the video to your computer by clicking any of the 'download here' urls. You will see a download button on the screen where you can download the tutorial video. Additionally, you can just download the .zip file for the code and open the tutorials folder and you will find all video walkthroughs there.
  
- [SCBS Config Files Walkthrough](https://ucsf.box.com/s/s12iiy0qyndnn1ziuigcg28jxu4d26tl)
+  [SCBS Setup Walkthrough](https://ucsf.box.com/s/1ecvfteyruaskojo8ol55hugwl6pw2g6) or [download here](tutorials/SCBSApplicationSetup.mp4)
  
- [SCBS Application Walkthrough](https://ucsf.box.com/s/znbk3ffso08xxtpl2deuqd8f8tr3ty60)
+  [SCBS Config Files Walkthrough](https://ucsf.box.com/s/vggrp7h80lj53wcrs5lw7mehnaclgnm1) or [download here](tutorials/SCBSConfigFileWalkthrough.mp4)
  
- [SCBS Montage/Switch Setup and Walkthrough](https://ucsf.box.com/s/sqcsxuaog4ngtrlhjjqqcuwfma6vasph)
+  [SCBS Application Walkthrough](https://ucsf.box.com/s/sx47s0knn9ucvvax2qpr5wk2js0m0ulq) or  [download here](tutorials/SCBSApplicationWalkthrough.mp4)
+ 
+  [SCBS Montage/Switch Setup and Walkthrough](https://ucsf.box.com/s/6j8j1mkdcpm8mj0l91v7aihlwhd6itla) or  [download here](tutorials/SCBSMontageSwitchSetupWalkthrough.mp4)
+ 
+  [SCBS Patient Stim Change Walkthrough](https://ucsf.box.com/s/19s6cygq2ciyro8pm29xgxbcchsw1iaf) or  [download here](tutorials/SCBSPatientStimWalkthrough.mp4)
 
 ### Introduction
 
-The main goal of this project is to provide a simple patient facing interface that will allow RC+S patients to easily stream neural data at home. This is important since developing any adaptive or “closed loop” protocol relies on both a large sample of training data and monitoring of algorithm performance. This should ideally occur in home setting over increasing timer periods. The current application does not change any parameters set on the INS (such as stim settings, stimulation group or sense settings) so long as the “Switch” functionality and the Researcher tools are turned off in the application_config.json file. Major parts of the code concern maintain a robust connection between the CTM and the INS. This includes automatic recovery of session connection both in cases in which the patient walks out of the room with computer or in which CTM/INS loose connectivity. Use of this code will allow continuous streaming during many activities of daily life and future versions will pair this recording with external monitors.
- 
+The main goal of this project is to provide a simple patient facing interface that will allow RC+S patients to easily stream neural data at home. This is important since developing any adaptive or “closed loop” protocol relies on both a large sample of training data and monitoring of algorithm performance. This should ideally occur in home setting over increasing time periods. The current application is completely customizable from the most basic version with just a Connect and Exit button that will only let the patient stream, to customizations that allow patients to change their own stim and researcher tools that allow researchers to control stim settings, group changes, stim sweeps, etc. Major parts of the code concern maintain a robust connection between the CTM and the INS. This includes automatic recovery of session connection both in cases in which the patient walks out of the room with computer or in which CTM/INS lose connectivity. Use of this code will allow continuous streaming during many activities of daily life.
  ### Application
-The SCBS will run in unilateral (single INS) mode which will only communicate and connect with one INS or bilateral (2 INS’ implanted) mode which will communicate and connect to 2 CTM/INS pairs.  The functionality will change the UI and functionality accordingly when the “bilateral” variable is changed to true/false in the application_config.json file. 
+The SCBS will run in unilateral (single INS) mode which will only communicate and connect with one INS or bilateral (2 INS’ implanted) mode which will communicate and connect to 2 CTM/INS pairs.  The functionality will change the UI and functionality accordingly when the “bilateral” parameter is changed to true/false in the application_config.json file.  
+
+**Very Important: If running bilateral, the INS' must be named correctly with the RLP. The left side must be named with an 'L' at the end and the right side must be named with an 'R' at the end (ie: Patient01L/Patient01R, 01L/01R, etc). They must be capital 'L' and 'R' and must be at the end. The rest of the name can be anything and any length allowable by RLP.** 
  
   #### Patient Screen (researcher tools disabled):
  ![](photos/PatientScreenNoResearchTools.PNG)
@@ -37,43 +42,54 @@ The SCBS will run in unilateral (single INS) mode which will only communicate an
 ![](photos/reportScreen.PNG)
 There is a report window that allows the user/patient to report their symptoms/medications and additional comments and the time that this occurred.  This will log into the Medtronic Eventlog.json file.  This is useful for getting the state of the patient while they are streaming data.
 
+#### Patient Stim Control:
+![](photos/PatientStimControlScreen.PNG)
+
 ### Application Functionality Overview
 With the application_config.json file, you can customize the application to your needs. You can enable/disable most buttons, hide stim display settings, change unilateral/bilateral, or turn on certain functionalities on connection.  More about the application_config later in this readme.
 
 #### Patient Screen Functionality
-The UI has information about what group the patient is in, how long they have been streaming, the INS/CTM/laptop battery levels, and stimulation data.  There is a stream coloring that will show when there is an issue with streaming.  If the light is green then the patient is streaming and if it is gray or flashing to gray then the streaming has stopped or is cutting out, respectively.
+1. The UI has information about what group the patient is in, how long they have been streaming, the INS/CTM/laptop battery levels, and stimulation data (amp, rate, contacts, therapy on/off, Adaptive on).  
+    - The app can be customized to hide stim display settings for patients that are blinded. You can hide group and all stimulation data (as detailed above) from the user. 
+    - There is a stream coloring that will show when there is an issue with streaming.  If the light is green then the patient is streaming and if it is gray or flashing to gray then the streaming has stopped or is cutting out, respectively. There is also the stream timer that will stop when streaming has stopped.
 
-There is an ability to turn on the option to collect the log data from the INS that gives the adaptive state changes.  This is the option GetAdaptiveLogInfo.  There is also the option to get the Mirror log data that is stored on the INS as well.  This will give you how many times and for how long the patient has been in each adaptive state.  The variable to change to turn that on is GetAdaptiveMirrorInfo.  There is also the option to GetEventLogInfo.  This allows you to get event related info such as group, therapy status, etc. All files get written inside of the current streaming session directory where the Medtronic .json files are stored.  They are all written out in a plain text file.  There is the ability to run this at startup each time a connection is made, or allow a button on the patient screen that allows them to run it whenever they click the button.
+2. The app can download the onboard INS logs either automatically at initial connection or with a button that is enabled that will allow the user to download the logs at any time they are connected. There are 3 different logs: App(Adaptive) logs, Event logs and Mirror logs.  The App logs get the adaptive state changes and other various info. The Event logs get group changes, therapy changes and other various info. And the Mirror logs will give you how many times and for how long the patient has been in each adaptive state.  To enable downloading of logs on initial startup for App, Event and Mirror, you can set the parameters in the application_config.json for GetAdaptiveLogInfo, GetEventLogInfo and GetAdaptiveMirrorInfo, respectively. You can also enable a button for the user to download the logs at any time by setting the LogDownloadButton object parameters which allow you to change button text, enable button and set which logs you would like to download when the user clicks the button. 
+    - All files get written inside of the current streaming session directory where the Medtronic .json files are stored.  They are all written out in a plain text file.
+    - Note: On automatic log download, the CTM and INS show that both have connected but the streaming has not started.  A spinner will run the entire time that the logs are being downloaded which may look like there are connection issues, but it is just downloading the logs. To verify, the user will see a flashing green light on their CTM while the logs are downloading.  The spinner will stop and streaming will start after logs have downloaded.
 
-There are 2 buttons that may be turned on to allow the user to open web pages. Each button's text may be edited along with each button's web page url. You can also force the user to be connected before they are able to open the web page.
+3. There are 2 buttons that may be turned on to allow the user to open web pages. Each button's text may be edited along with each button's web page url. You can also force the user to be connected before they are able to open the web page.  This helps if they have a report or a task on a webpage and you want them to be streaming.
 
-There is ability to turn certain ctm beep noises on or off.  The most common setting is to have the ctm with no beeps, but if you would like the patient to know when their ins is disconnected from the ctm you can set that as well. Many other variations are also available.
+4. There is the ability to turn certain ctm beep noises on or off.  The most common setting is to have the ctm with no beeps, but if you would like the patient to know when their ins is disconnected from the ctm you can set that as well. Many other variations are also available.
 
-There is a button that may be turned on to allow the user to move to a specific group.  This is used to quickly move them into a safe group if they are running adaptive therapy or if you just want a button that moves them into a specified "safe" group that is preprogrammed with the RLP. The button text may be edited and each ins side may have a specific group assigned.
+5. There is a button that may be turned on to allow the user to move to a specific group.  This is used to quickly move them into a safe group if they are running adaptive therapy or if you just want a button that moves them into a specified "safe" group that is preprogrammed with the RLP (or just to move to a group for any reason). The button text may be edited and each INS side may have a specific group assigned.
 
-There is a Montage functionality that will allow the patient to run multiple sense files one after another while recording data.  This requires a re-connection if already connected due to changing the Mode to 4 for optimal bandwidth. The instructions for the montage are customizable and the clinician can add as many montage sense files as they would like.  The time for each montage run is also customizable. The patient will get a total time for the entire montage and when running will get a progress status and timer countdown until finished.
+6. There is a Montage functionality that will allow the patient to run multiple sense files one after another while recording data.  This requires a re-connection if already connected due to changing the Mode to 4 for optimal bandwidth. The instructions for the montage are customizable and the clinician can add as many montage sense files as they would like.  The time for each montage run is also customizable. The patient will get a total time for the entire montage and when running will get a progress status and timer countdown until finished.  One thing to note is that if therapy is on, then the app will check if contacts 0-3 and 8-11 are providing stim. If they are, then the lfp1 and lfp2 will get set automatically to 100.
 
-There is the “Switch” functionality.  This is extremely important if you are trying to run a double-blind study and don’t want the patient to know if they are in adaptive or sham adaptive (open loop) mode.  The way this works is that there is a master switch config file that contains a list of adaptive config file names.  There is also an index corresponding to the current adaptive config file to run from the list.  When the patient clicks on the Switch button, the program will load the adaptive config file at the current index from the master switch config file.  This adaptive configuration will be configured on the patient’s INS.  If the patient is running in bilateral mode, then it will update both INS’ at the same time.  This requires that you have a separate directory for the other side with its own master config file and list of adaptive files.  Once the patient is finished updating their INS’, the current adaptive file(s) will be written into the current Medtronic session directory and the master config file(s) will be updated with the next index so that the next adaptive file can run the next time.  A cool feature is that you can turn on the ability to prevent the patient from running the switch functionality more that once in a specific amount of time.  This helps in case a patient forgets that they have already ran the switch for that day and try to run it again within the minimum time frame allowed by the clinician.  Turning on the feature is done by changing the WaitTimeIsEnabled to true and setting the WaitTimeInMinutes to the minimum number of minutes the patient must wait before being able to run Switch again.
+7. There is the “Switch” functionality.  This is extremely important if you are trying to run a double-blind study and don’t want the patient to know if they are in adaptive or sham adaptive (open loop) mode.  The way this works is that there is a master switch config file that contains a list of adaptive config file names.  There is also an index corresponding to the current adaptive config file to run from the list.  When the patient clicks on the Switch button, the program will load the adaptive config file at the current index from the master switch config file.  This adaptive configuration will be configured on the patient’s INS.  If the patient is running in bilateral mode, then it will update both INS’ at the same time.  This requires that you have a separate directory for the other side with its own master config file and list of adaptive files.  Once the patient is finished updating their INS’, the current adaptive file(s) will be written into the current Medtronic session directory and the master config file(s) will be updated with the next index so that the next adaptive file can run the next time.  A cool feature is that you can turn on the ability to prevent the patient from running the switch functionality more that once in a specific amount of time.  This helps in case a patient forgets that they have already ran the switch for that day and try to run it again within the minimum time frame allowed by the clinician.  Turning on the feature is done by changing the WaitTimeIsEnabled to true and setting the WaitTimeInMinutes to the minimum number of minutes the patient must wait before being able to run Switch again.
 
-There is the ability to run a Lead Integrity test on connection. This will run the monopolar and bipolar conctacts and print them in the medtronic EventLog.json file. There is also the ability to turn a button on for researchers to run it any time they would like in the Resarch Tools tab.
+8. There is the ability to run a Lead Integrity test on connection. This will run the monopolar and bipolar conctacts and print them in the medtronic EventLog.json file. There is also the ability to turn a button on for researchers to run it any time they would like in the Resarch Tools tab.
 
-There is the ability to hide the report button. You can hide all the button's from the user besides the Connect and Exit buttons. 
+9. There is the ability to hide the report button. You can hide all the button's from the user besides the Connect and Exit buttons. 
+
+10. The patient stim control allows patients to control certain stimulation settings.  The researcher beforehand sets up the patient_stim_config file for the left/unilateral and right sides.  There are 4 cards allowed for the patient to choose from.  Each card allows the patient to adjust one stim type (amp,rate,pw or no stim changes).  The allowable settings are set by the researcher, so the patient may only go to the allowable stim settings (so if amp is set to (0,1,1.5) then those are the only values the patient can adjust to). The cards can be set to be different groups or all the same group with different stim types (amp, rate, pw, none). Cards can be hidden as well, so the patient may either have 1 card to adjust or all 4 to choose from. The patient may turn stim on or off if the buttons are enabled by the researcher.  See video tutorial for more information and below for config file instructions.
 
 #### Researcher Tools Screen Functionality (only available if Researcher tools flag is turned on in application_config.json)
 The researcher tools allow researchers to adjust the stimulation for the patient, change groups, turn therapy on/off and run other researcher tools (explained below) with a click of the button. This works for unilateral or bilateral and will adjust the UI accordingly to each setting. When the rearcher tools flag is turned off in the application_config.json, then the patient will not have any access to this functionality or even know that it is there (it is hidden from them).
-Note- if the researcher is adjust stim settings, there is a setting from the dropdown menu named Both when running bilaterally. This will adjust the setting on the left device followed automatically by the right device. You may also just choose to adjust the Left or Right devices separately.
+    
+ - Note if the researcher is adjusting stim settings, there is a setting from the dropdown menu named Both when running bilaterally. This will adjust the setting on the left device followed automatically by the right device. You may also just choose to adjust the Left or Right devices separately.
 
-The SCBS is capable of making use of an “Align” functionality which will move from the current group to group B, then turn stim therapy on/off (based on what it is currently on), then on/off again, and then it will do that 2 more times leaving it in the original state stim therapy state that it was in originally.  Lastly, it will move it to group A.  The purpose of this is to align INS data points with artifacts.  When running in bilateral mode, the “align” will do this at almost the same time for both INS’ so that the clinician can have a sense of alignment between both INS’.  This will work as well in unilateral mode in case you need to add an artifact to the INS data to align to an outside device.
+1. The SCBS is capable of making use of an “Align” functionality which will move from the current group to group B, then turn stim therapy on/off (based on what it is currently on), then on/off again, and then it will do that 2 more times leaving it in the original state stim therapy state that it was in originally.  Lastly, it will move it to group A.  The purpose of this is to align INS data points with artifacts.  When running in bilateral mode, the “align” will do this at almost the same time for both INS’ (left first then  immediately followed by right) so that the clinician can have a sense of alignment between both INS’.  This will work as well in unilateral mode in case you need to add an artifact to the INS data to align to an outside device.
 
-New Session button may be turned on and allows the researcher to start a new session directory.. This disconnects the ctm(s)/ins(') and reconnects them which creates a new session directory for the Medtronic .json files for a fresh new set of files. 
+2. New Session button may be turned on and allows the researcher to start a new session directory.. This disconnects the ctm(s)/ins(') and reconnects them which creates a new session directory for the Medtronic .json files for a fresh new set of files. 
 
-Stim Sweep is a functionality that will allows the researcher to run a preconfigured set of stim settings on the device.  There is a config file that will be used to adjust stim amp/pw/rate in a specified group and specified amount of time. 
+3. Stim Sweep is a functionality that allows the researcher to run a preconfigured set of stim settings on the device.  There is a config file that is used to adjust stim amp/pw/rate in a specified group/program and specified amount of time in ms. 
 
-FFT Viewer allows the researcher to visualize the FFT stream in real time.  You will need to get a SciChart licence for this to work. They are free for researchers.
+4. FFT Viewer allows the researcher to visualize the FFT stream in real time.  You will need to get a SciChart licence for this to work. They are free for researchers. See SciChart license towards end of readme for instructions.
 
-Update Sense button will reload the sense files for left and if bilateral, right sense_config files. The button will disable while loading and reenable when finished. Streaming will automatically restart.
+5. Update Sense button will reload the sense files for left and if bilateral, right sense_config files. The button will disable while loading and reenable when finished. Streaming will automatically restart.
 
-If you hover your mouse over the stim display settings, it will read out the upper and lower limits for of the amp, rate and pulse width.
+6. If you hover your mouse over the stim display settings, it will read out the upper and lower limits for of the amp, rate and pulse width.
+7. The rollover timer resets when the amp settings have changed or there is a new session.
 
 ## User Guide
 
@@ -95,6 +111,7 @@ The first config file is the application config file.  It needs to be in the dir
 	"BasePathToJSONFiles": "C:\\ProgramData\\Medtronic ORCA",
 	"TurnOnResearcherTools": true,
 	"RunLeadIntegrityTestOnStartup": false,
+	"PatientStimControl": false,
 	"Bilateral": false,
 	"Switch": true,
 	"Align": true,
@@ -166,6 +183,7 @@ The first config file is the application config file.  It needs to be in the dir
 - BasePathToJSONFiles is the base path where the medtronic json files will be written to. This should be the same as the SummitRegWithoutORCA.reg file on the line: "DataDirectory"="**C:\\\\ProgramData\\\\Medtronic ORCA**". This is very important to get correct so that it ensures that the switch config files and the mirror log and event log files are written in the current session directory. 
 - Researcher tools allow you to hide or show the researcher tools tab. This should be turned off for patient only use.
 - RunLeadIntegrityTestOnStartup set to true runs a lead integrity test on connection for patients.
+- Enables the patient stim control buttons on Patient tab.
 - Set bilateral to true if bilateral else false for unilateral
 - Switch, Montage and Stim Sweep to true if you would like the button to be present. 
 - Align if you would like to use the align functionality
@@ -654,6 +672,184 @@ The format for the stim sweep:
 }
 ```
 
+#### Patient Stim Control
+
+Patient Stim Control buttons can be accessed from Patient Screen inside stim display:
+ ![](photos/PatientStimOnHomescreen.PNG)
+ 
+Patient can move from one card to the next. Update Card button will highlight when selecting different card:
+ ![](photos/PatientStimUpdateCard.PNG)
+ 
+ Patient can adjust stim within the card settings. Update Stim button will highlight when selecting different card:
+ ![](photos/patientStimUpdateStim.PNG)
+ 
+ Patient Stim Control Screen with card selected:
+ ![](photos/PatientStimControlScreen.PNG)
+ 
+
+The patient stim control allows the patient to control their stim settings with restrictions. They can adjust stim on/off if the buttons are enabled in config. There are 4 cards that are configurable.  Each card can be hidden so that the patient will have 0-4 different cards to choose from.  Each card can move to a different group/program or have the same group/program (so all cards can be group A if you want). Each card will be able to control one stim type (amp, rate, pulse width or none). When a user clicks on the card and confirms the card move, the group that is configured for the card will be moved to. The TargetAmp, TargetRate and TargetPW values from the card config will be set on that specific group. The patient can then choose one of the stim types values that is configured in that card, so if amp is stim type and AmpValues are (0, 1, 1.5) then they can only move to one of those values. If the type is none, then the patient can't move any stim settings. One thing to note is that in the previous example, the TargetAmp must be included in the AmpValues (same goes for rate or pulse width if they are the stim type), so TargetAmp must be 0, 1 or 1.5.  The display is configurable so that each stim display can be hidden from patient. The units and stim value that patient will move to can be hidden as well. Be sure to read the comments in the config files for help.
+
+The patient stim config files must be named unilateral_left_patient_stim_config.json for left/unilateral and right_patient_stim_config.json for right and be placed in the directory C:\SCBS\Patient_Stim. So you should have 2 files in there:
+
+C:\SCBS\Patient_Stim\unilateral_left_patient_stim_config.json
+
+C:\SCBS\Patient_Stim\right_patient_stim_config.json
+
+***The program will not attempt to move back to the original group settigns on errors when moving from one card to the next.
+
+The format for the patient stim control for both left and right are:
+```
+{
+	"comment": "Patient Stim Control using cards.  You may use 0 cards or up to 4 cards at one time. Patient may control either amp, rate or pulse width within each card. Stim display settings can be hidden for each card.",
+	"HideStimOnButton": false,
+	"HideStimOffButton": false,
+	"Card1": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "A",
+		"CustomText": "Amp Change",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 0,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 2,
+				"AmpValues": [0.2, 0.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 120,
+				"RateValues": [100, 120, 129.9],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 80]
+			}
+		}
+	},
+	"Card2": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "B",
+		"CustomText": "Rate Change",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 1,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 0.2,
+				"AmpValues": [0, 0.5, 1, 1.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 130,
+				"RateValues": [100, 115, 130],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 80]
+			}
+		}
+	},
+	"Card3": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "C",
+		"CustomText": "PW Change",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 2,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 0,
+				"AmpValues": [0, 0.5, 1, 1.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 125,
+				"RateValues": [100, 120, 129.9],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 70]
+			}
+		}
+	},
+	"Card4": {
+		"comment": "HideCard allows you hide the card. Group format (must include double quote's): 'A', 'B', 'C' or 'D'. CustomText must be 15 characters or less in total.",
+		"HideCard": false,
+		"Group": "D",
+		"CustomText": "No Changes",
+		"DisplaySettings": {
+			"HideGroupDisplay": false,
+			"HideSiteDisplay": false,
+			"HideAmpDisplay": false,
+			"HideRateDisplay": false,
+			"HidePulseWidthDisplay": false
+		},
+		"StimControl": {
+			"comment": "StimControlType set to 0-amp, 1-rate, 2-pulse width or 3-None. HideCurrentValue hides the current value from the patient. HideCurrentValueUnits hides the units of the current value from patient. Program 0-3 to change for amp and pulse width.",
+			"StimControlType": 3,
+			"HideCurrentValue": false,
+			"HideCurrentValueUnits": false,
+			"Program": 0,
+			"Amp": {
+				"comment": "TargetAmp is what is set when clicking the card. TargetAmp MUST be a value in AmpValues. AmpValues are the values that patient can move to, but only if StimControlType is set for Amp. All values in mA.",
+				"TargetAmp": 0.4,
+				"AmpValues": [0, 0.5, 1, 1.5, 2]
+			},
+			"Rate": {
+				"comment": "TargetRate is what is set when clicking the card. TargetRate MUST be a value in RateValues. RateValues are the values that patient can move to, but only if StimControlType is set for Rate. All values in Hz.",
+				"TargetRate": 115,
+				"RateValues": [100, 120, 129.9],
+				"SenseFriendly": true
+			},
+			"PulseWidth": {
+				"comment": "TargetPulseWidth is what is set when clicking the card. TargetPulseWidth MUST be a value in PulseWidthValues. PulseWidthValues are the values that patient can move to, but only if StimControlType is set for PulseWidth. All values in μS.",
+				"TargetPulseWidth": 60,
+				"PulseWidthValues": [60, 80]
+			}
+		}
+	}
+}
+```
+
 ### Add SciChart Licnese (required to use the FFT Visualizer)
 In order to use the graph, you need a SciChart License.  They provide free academic licenses through their website: https://www.scichart.com/educational-discount-programme/. You may also buy one as well.  The license file is a plain .txt file also located in the directory *C:\SCBS* with the name sciChartLicense.txt.  The sciChartLicense template file is:
 ```
@@ -689,5 +885,5 @@ There is application logging throughout the program.  This uses Caliburn Micro L
 
 ### Contact
 
-Randy Perrone (Software Engineer) randy.perrone@ucsf.edu **or** Ro'ee Gilron (Project Manager) roee.gilron@ucsf.edu
+Randy Perrone (Software Engineer) mrrandyperrone@gmail.com **or** Ro'ee Gilron (Project Manager) roee.gilron@ucsf.edu
 

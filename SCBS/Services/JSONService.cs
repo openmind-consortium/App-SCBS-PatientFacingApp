@@ -420,6 +420,62 @@ namespace SCBS.Services
             }
             return model;
         }
+
+        /// <summary>
+        /// Gets the patient stim control model from the patient stim control config
+        /// </summary>
+        /// <param name="filePath">File path to the patient stim control config file</param>
+        /// <returns>PatientStimControl model if success or null if unsuccessful</returns>
+        public PatientStimControlModel GetPatientStimControlModelFromFile(string filePath)
+        {
+            PatientStimControlModel model = null;
+            string json = null;
+            try
+            {
+                //read PatientStimControlModel config file into string
+                using (StreamReader sr = new StreamReader(filePath))
+                {
+                    json = sr.ReadToEnd();
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("The PatientStimControl config file could not be read from the file. Please check that it exists.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _log.Error(e);
+                return model;
+            }
+            if (string.IsNullOrEmpty(json))
+            {
+                MessageBox.Show("PatientStimControl JSON file is empty. Please check that the PatientStimControl config is correct.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _log.Warn("PatientStimControl JSON file is empty after loading file.");
+                return model;
+            }
+            else
+            {
+                SchemaModel schemaModel = new SchemaModel();
+                if (ValidateJSON(json, schemaModel.GetPatientStimControlSchema()))
+                {
+                    //if correct json format, write it into master switchModel
+                    try
+                    {
+                        model = JsonConvert.DeserializeObject<PatientStimControlModel>(json);
+                    }
+                    catch (Exception e)
+                    {
+                        MessageBox.Show("Could not convert PatientStimControl config file. Please be sure that PatientStimControl config file is correct.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        _log.Error(e);
+                        return model;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Could not validate PatientStimControl config file. Please be sure that PatientStimControl config file is correct.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _log.Warn("Could not validate PatientStimControl config file.");
+                    return model;
+                }
+            }
+            return model;
+        }
         #endregion
 
         #region Write Model back to Config Files

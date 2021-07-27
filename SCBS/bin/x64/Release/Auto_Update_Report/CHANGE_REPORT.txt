@@ -1,3 +1,8 @@
+VERSION 2.1.0.4
+Patient Stim Control- allows patients to adjust stimulation with restrictions. Update application_config file adds flag to enable patient stim buttons. New Patient_Stim directory in current_config_files.  Please add this if you plan to use patient stim control.
+
+UI Changes - Patient tab looks cleaner and right and left sides are separated. Researcher tools font is smaller so that there is no need to change display settings on patient computer to not have it cut off the bottom portion.
+
 7/15/2021 VERSION 2.1.0.3
 Bug fix: BandFormation WeightMultiplies default value now set to 7 if parameter not included in sense config file.
 Update: Set default config values and improved the comments for confusing parameters.

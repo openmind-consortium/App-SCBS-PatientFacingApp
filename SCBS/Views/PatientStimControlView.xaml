@@ -1,0 +1,147 @@
+﻿<Window x:Class="SCBS.Views.PatientStimControlView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro.Platform"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+        xmlns:local="clr-namespace:SCBS.Views"
+        mc:Ignorable="d"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" WindowState="Normal" ResizeMode="NoResize"
+        Title="Patient Stim Control" Height="600" Width="1000" FontSize="24">
+    <Window.Resources>
+        <Style x:Key="_ListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border Name="_Border"
+                                Margin="8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="true">
+                                <Setter TargetName="_Border" Property="Background" Value="Orange"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="textWrapper" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="borderStyle" BorderBrush="Blue" BorderThickness="1" Background="{TemplateBinding Background}" >
+                            <TextBlock TextAlignment="Center" VerticalAlignment="Center" Text="{TemplateBinding Content}" TextWrapping="Wrap"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="borderStyle" Property="Background" Value="White" />
+                                <Setter TargetName="borderStyle" Property="BorderBrush" Value="DarkGray" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="true">
+                                <Setter Property = "Foreground" Value="GhostWhite"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="LightBlue"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Border BorderThickness="4" BorderBrush="Blue">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="ExitButtonClick" Style="{StaticResource textWrapper}" Content="Exit" Grid.Column="8" Grid.Row="0" Grid.ColumnSpan="2" Margin="5, 10, 5, 10" HorizontalContentAlignment="Center"/>
+
+            <ListBox ItemsSource="{Binding ListOfCards}" SelectedIndex="{Binding SelectedCardIndex, Mode=TwoWay}" SelectedItem="{Binding SelectedCardItem, Mode=TwoWay}" Grid.Column="1" Grid.ColumnSpan="8" Grid.Row="0" Grid.RowSpan="6" HorizontalAlignment="Center" ItemContainerStyle="{DynamicResource _ListBoxItemStyle}">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" Rows="2" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical">
+                            <!--Card 1-->
+                            <Border x:Name="border_therapy_status_card0" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="0" Grid.RowSpan="3" Margin="20, 5, 20, 5" Background="{Binding BackgroundCardColor}">
+                                <StackPanel Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="0" Grid.RowSpan="3" VerticalAlignment="Center" Orientation="Vertical" Margin="5, 5, 5, 5">
+                                    <TextBlock Text="{Binding CardCustomTextDisplay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CardGroupDisplay}" Visibility="{Binding CardGroupDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CardSiteDisplay}" Visibility="{Binding CardSiteDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CardAmpDisplay}" Visibility="{Binding CardAmpDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding CardRateDisplay}" Visibility="{Binding CardRateDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding CardPWDisplay}" Visibility="{Binding CardPWDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
+                                <Button Style="{StaticResource textWrapper}" IsEnabled="{Binding CardDecrementButtonEnabled}" MinHeight="75" MinWidth="40" FontFamily="Marlett" Content="5" Grid.Column="1" Grid.Row="3" Margin="5,5,5,5">
+                                    <Button.LayoutTransform>
+                                        <RotateTransform CenterX="0.5" CenterY="0.5" Angle="-90"/>
+                                    </Button.LayoutTransform>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="CardDecrementButtonClick">
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+                                <Border BorderThickness="1" BorderBrush="Black" Grid.Column="2" Grid.Row="3" Margin="5,5,5,5" Padding="5" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding CardTargetStimDisplay}" MinWidth="35" Visibility="{Binding CardTargetStimDisplayVisibility}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding CardTargetStimUnitsDisplay}" Visibility="{Binding CardTargetStimUnitsDisplayVisibility}" Foreground="Blue" Grid.Column="3" Grid.Row="3" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource textWrapper}" IsEnabled="{Binding CardIncrementButtonEnabled}" MinHeight="75" FontFamily="Marlett" Content="5" Grid.Column="4" Grid.Row="3" Margin="5,5,5,5">
+                                    <Button.LayoutTransform>
+                                        <RotateTransform CenterX="0.5" CenterY="0.5" Angle="90"/>
+                                    </Button.LayoutTransform>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="CardIncrementButtonClick">
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Button x:Name="StimOnButtonClick" Style="{StaticResource textWrapper}" Visibility="{Binding StimOnButtonVisibilty}" IsEnabled="{Binding IsStimOnButtonEnabled}" MinHeight="50" MinWidth="130" Content="Stim On" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2" Margin="5, 10, 5, 10" HorizontalContentAlignment="Center" HorizontalAlignment="Center"/>
+            <Button x:Name="StimOffButtonClick" Style="{StaticResource textWrapper}" Visibility="{Binding StimOffButtonVisibilty}" IsEnabled="{Binding IsStimOffButtonEnabled}" MinHeight="50" MinWidth="130" Content="Stim Off" Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2" Margin="5, 10, 5, 10" HorizontalContentAlignment="Center" HorizontalAlignment="Center"/>
+            <Button x:Name="UpdateCardButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding IsUpdateCardButtonEnabled}" MinHeight="50" MinWidth="130" Content="Update Card" Grid.Column="8" Grid.Row="2" Margin="11,10,18,10" HorizontalContentAlignment="Center" HorizontalAlignment="Center"/>
+            <Button x:Name="UpdateStimButtonClick" Style="{StaticResource textWrapper}" IsEnabled="{Binding IsUpdateStimButtonEnabled}" MinHeight="50" MinWidth="130" Content="Update Stim" Grid.Column="8" Grid.Row="3" Grid.ColumnSpan="2" Margin="5, 10, 5, 10" HorizontalContentAlignment="Center" HorizontalAlignment="Center"/>
+
+            <Grid Width="400" Height="75" Grid.Column="4" Grid.Row="2" Grid.ColumnSpan="1" Grid.RowSpan="2" Visibility="{Binding ProgressVisibility}">
+                <ProgressBar  Minimum="0" Maximum="100" Value="{Binding CurrentProgress}"/>
+                <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

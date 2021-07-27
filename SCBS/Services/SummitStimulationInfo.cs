@@ -216,6 +216,9 @@ namespace SCBS.Services
             {
                 _log.Error(e);
             }
+            int pulseWidthValue = -1;
+            double rateValue = -1;
+            double ampValue = -1;
             try
             {
                 //parse the data to get the pulsewidth
@@ -226,6 +229,9 @@ namespace SCBS.Services
                     stimAmp = insStateGroup.Programs[program].AmplitudeInMilliamps.ToString();
                     stimElectrode = FindStimElectrodes(insStateGroup, program);
                     electrodes = insStateGroup?.Programs[program]?.Electrodes;
+                    pulseWidthValue = insStateGroup.Programs[program].PulseWidthInMicroseconds;
+                    rateValue = insStateGroup.RateInHz;
+                    ampValue = insStateGroup.Programs[program].AmplitudeInMilliamps;
                 }   
             }
             catch (Exception e)
@@ -233,8 +239,16 @@ namespace SCBS.Services
                 _log.Error(e);
             }
             //Set the Model with these values and return model
-            StimParameterModel StimParameterModel = new StimParameterModel(pulseWidth, stimRate, stimAmp, stimElectrode, electrodes, insStateGroup, ampLimits);
-            return StimParameterModel;
+            if(rateValue == -1 || ampValue == -1 || pulseWidthValue == -1)
+            {
+                StimParameterModel StimParameterModel = new StimParameterModel(pulseWidth, stimRate, stimAmp, stimElectrode, electrodes, insStateGroup, ampLimits);
+                return StimParameterModel;
+            }
+            else
+            {
+                StimParameterModel StimParameterModel = new StimParameterModel(pulseWidth, stimRate, stimAmp, stimElectrode, electrodes, insStateGroup, ampLimits, rateValue, ampValue, pulseWidthValue);
+                return StimParameterModel;
+            }
         }
 
         /// <summary>
