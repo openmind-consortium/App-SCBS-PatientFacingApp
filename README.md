@@ -22,6 +22,8 @@ The main goal of this project is to provide a simple patient facing interface th
 The SCBS will run in unilateral (single INS) mode which will only communicate and connect with one INS or bilateral (2 INS’ implanted) mode which will communicate and connect to 2 CTM/INS pairs.  The functionality will change the UI and functionality accordingly when the “bilateral” parameter is changed to true/false in the application_config.json file.  
 
 **Very Important: If running bilateral, the INS' must be named correctly with the RLP. The left side must be named with an 'L' at the end and the right side must be named with an 'R' at the end (ie: Patient01L/Patient01R, 01L/01R, etc). They must be capital 'L' and 'R' and must be at the end. The rest of the name can be anything and any length allowable by RLP.** 
+
+**If you would like to just download the working application, go to this directory [Release Version](SCBS/bin/x64/Release) and download all of the files from there. Add all 7 of your Medtronic dll's from your RDK kit located in SummitRDK_1_6_0\DLLs\AnyCPU to the same directory you added the files for the SCBS. Be sure to add your config files (explained below) in the correct directories and click the SCBS.exe button and it will open up the application. If you can't download the directory for Release Version, just scroll to the top and click Code and the Download Zip (this will download all the code with it). Extract the files and you will find the same files in the directory path SCBS/bin/x64/Release.  You can run the application from anywhere on your computer but the config files must be located int he correct directory.**
  
   #### Patient Screen (researcher tools disabled):
  ![](photos/PatientScreenNoResearchTools.PNG)
