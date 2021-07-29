@@ -92,8 +92,8 @@
                             <!--Card 1-->
                             <Border x:Name="border_therapy_status_card0" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="0" Grid.RowSpan="3" Margin="20, 5, 20, 5" Background="{Binding BackgroundCardColor}">
                                 <StackPanel Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="0" Grid.RowSpan="3" VerticalAlignment="Center" Orientation="Vertical" Margin="5, 5, 5, 5">
-                                    <TextBlock Text="{Binding CardCustomTextDisplay}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding CardGroupDisplay}" Visibility="{Binding CardGroupDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CardCustomTextDisplay}" FontWeight="SemiBold" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CardGroupDisplay}" FontWeight="SemiBold" Visibility="{Binding CardGroupDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     <TextBlock Text="{Binding CardSiteDisplay}" Visibility="{Binding CardSiteDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     <TextBlock Text="{Binding CardAmpDisplay}" Visibility="{Binding CardAmpDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>
                                     <TextBlock Text="{Binding CardRateDisplay}" Visibility="{Binding CardRateDisplayVisibility}" Margin="0, 0, 10, 0" HorizontalAlignment="Center"/>

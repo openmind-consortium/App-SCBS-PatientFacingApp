@@ -363,6 +363,7 @@ namespace SCBS.ViewModels
                 activeCard = SelectedCardItem;
                 activeCardIndex = SelectedCardIndex;
                 await UpdateSettings(ListOfCards[activeCardIndex]);
+                IsUpdateStimButtonEnabled = false;
                 switch (SelectedCardIndex)
                 {
                     case 0:

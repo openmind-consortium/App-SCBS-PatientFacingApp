@@ -1,4 +1,4 @@
-# SCBS
+# SCBS (Summit Continuous Bilateral Streaming)
 
 ## README
 
@@ -92,6 +92,10 @@ The researcher tools allow researchers to adjust the stimulation for the patient
 
 6. If you hover your mouse over the stim display settings, it will read out the upper and lower limits for of the amp, rate and pulse width.
 7. The rollover timer resets when the amp settings have changed or there is a new session.
+
+### Logging
+
+There is application logging throughout the program.  This uses Caliburn Micro Log4Net logging.  The log file will be created every time a user starts the program and keeps logging in that same file until the user clicks the Exit button. The logs contain all of the button clicks and detailed return errors from the Medtronic device. If you get a Medtronic API Return Error message then check these logs to find the details.  The logs can be found in the same directory that your Medtronic logs are in, assuming you set your BasePathToJSONFiles in the application_config.json to the same directory as the registry editor (SummitRegWithoutORCA.reg) to disable ORCA (see application_config explanation below). If you have not set that to the same path name, it will create a directory in the same directory that your SCBS files are located (in the same directory as SCBS.exe) called (null).  In there you will see log files for the date and time they were created (ie: Log-2021-07-29_10-10-16.log). 
 
 ## User Guide
 
@@ -881,11 +885,7 @@ If the version number has increased in the xml file, then the auto-update will b
 
 After auto-update is all setup, you may update the application.  To do so, you will need to increment the AssemblyVersion number in your AssemblyInfo.cs in your program. Build your Release version of your program after incrementing your Assembly version.  You will then need to zip the *release* directory of the application (all the files in the directory and not the directory itself).  You may call it whatever you like, but it must be the same as what is in your xml file.  I called mine SCBS.zip (as shown above in xml file example).  You will then need to edit the xml file so that the version number is the same as the version you incremented in your AssemblyVersion.  Upload the xml file to the location (server, cloud, etc) of the url in your url.txt file.  Upload the .zip file to the location stated in your xml file.  After this is done, the next time the program is run, the user will be prompted to update the application.
 
-### Logging
-
-There is application logging throughout the program.  This uses Caliburn Micro Log4Net logging.  The logs can be found in C:\\SCBS\\logs and a log file will be created every time a user starts the program and keeps logging in that same file until the user clicks the Exit button.
-
 ### Contact
 
-Randy Perrone (Software Engineer) mrrandyperrone@gmail.com **or** Ro'ee Gilron (Project Manager) roee.gilron@ucsf.edu
+Randy Perrone (Software Engineer) mrrandyperrone@gmail.com **or** Ro'ee Gilron (Project Manager) roeegilron@gmail.com
 
