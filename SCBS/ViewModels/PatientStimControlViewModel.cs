@@ -368,18 +368,71 @@ namespace SCBS.ViewModels
                 {
                     case 0:
                         SetCardUISettings(0);
-                        SetCardDecrementIncrementButtonUISettingsForAmp(ListOfCards[activeCardIndex]);
+                        switch (ListOfCards[activeCardIndex].StimControlType)
+                        {
+                            case 0:
+                                SetCardDecrementIncrementButtonUISettingsForAmp(ListOfCards[activeCardIndex]);
+                                break;
+                            case 1:
+                                SetCardDecrementIncrementButtonUISettingsForRate(ListOfCards[activeCardIndex]);
+                                break;
+                            case 2:
+                                SetCardDecrementIncrementButtonUISettingsForPW(ListOfCards[activeCardIndex]);
+                                break;
+                            default:
+                                return;
+                        }
                         break;
                     case 1:
                         SetCardUISettings(1);
-                        SetCardDecrementIncrementButtonUISettingsForRate(ListOfCards[activeCardIndex]);
+                        switch (ListOfCards[activeCardIndex].StimControlType)
+                        {
+                            case 0:
+                                SetCardDecrementIncrementButtonUISettingsForAmp(ListOfCards[activeCardIndex]);
+                                break;
+                            case 1:
+                                SetCardDecrementIncrementButtonUISettingsForRate(ListOfCards[activeCardIndex]);
+                                break;
+                            case 2:
+                                SetCardDecrementIncrementButtonUISettingsForPW(ListOfCards[activeCardIndex]);
+                                break;
+                            default:
+                                return;
+                        }
                         break;
                     case 2:
                         SetCardUISettings(2);
-                        SetCardDecrementIncrementButtonUISettingsForPW(ListOfCards[activeCardIndex]);
+                        switch (ListOfCards[activeCardIndex].StimControlType)
+                        {
+                            case 0:
+                                SetCardDecrementIncrementButtonUISettingsForAmp(ListOfCards[activeCardIndex]);
+                                break;
+                            case 1:
+                                SetCardDecrementIncrementButtonUISettingsForRate(ListOfCards[activeCardIndex]);
+                                break;
+                            case 2:
+                                SetCardDecrementIncrementButtonUISettingsForPW(ListOfCards[activeCardIndex]);
+                                break;
+                            default:
+                                return;
+                        }
                         break;
                     case 3:
                         SetCardUISettings(3);
+                        switch (ListOfCards[activeCardIndex].StimControlType)
+                        {
+                            case 0:
+                                SetCardDecrementIncrementButtonUISettingsForAmp(ListOfCards[activeCardIndex]);
+                                break;
+                            case 1:
+                                SetCardDecrementIncrementButtonUISettingsForRate(ListOfCards[activeCardIndex]);
+                                break;
+                            case 2:
+                                SetCardDecrementIncrementButtonUISettingsForPW(ListOfCards[activeCardIndex]);
+                                break;
+                            default:
+                                return;
+                        }
                         break;
                     default:
                         SetCardUISettings(-1);
